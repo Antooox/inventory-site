@@ -19,6 +19,8 @@
     .muted{color:#657084;font-size:13px}
     .small{font-size:13px;padding:7px 10px}
   </style>
+
+  <!-- Supabase UMD -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
@@ -52,12 +54,14 @@
 
 <script>
 /* ========== CONFIG - replace with your values ========== */
-const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co'; // <-- replace
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY'; // <-- replace
+const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co'; // <- your URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY'; // <- your anon key
 const ROW_KEY = 'row1_logistics'; // shared key for this page
 /* ====================================================== */
 
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('Initializing client...');
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('supabase client:', !!supabase);
 
 let listRowId = null;   // uuid of the row in DB
 let items = [];         // local copy of items array
@@ -76,6 +80,7 @@ const $status = document.getElementById('status');
 window.addEventListener('load', init);
 
 async function init(){
+  console.log('init() start');
   $date.value = new Date().toISOString().slice(0,10);
   $add.onclick = onAdd;
   $remove.onclick = onRemoveSelected;
@@ -83,12 +88,14 @@ async function init(){
   $export.onclick = onExportCSV;
   await loadOrCreateListRow();
   render();
+  console.log('init() done, listRowId=', listRowId);
 }
 
 async function loadOrCreateListRow(){
   setStatus('Loading...');
-  // 1) try to read existing row by ROW_KEY
+  console.log('Searching for row with key', ROW_KEY);
   const { data, error } = await supabase.from('lists').select('*').eq('row', ROW_KEY).limit(1).maybeSingle();
+  console.log('select result', {data, error});
   if (error){
     console.error('select error', error);
     setStatus('Failed to load');
@@ -100,9 +107,11 @@ async function loadOrCreateListRow(){
     setStatus('Loaded');
     return;
   }
-  // 2) create row if not exists
+  // create row if not exists
+  console.log('No row found — creating new row');
   const toInsert = { row: ROW_KEY, items: [] };
   const { data: ins, error: insErr } = await supabase.from('lists').insert([toInsert]).select().maybeSingle();
+  console.log('insert result', {ins, insErr});
   if (insErr){
     console.error('insert error', insErr);
     setStatus('Failed to create');
@@ -138,7 +147,6 @@ function render(){
     return;
   }
   $tbody.innerHTML = items.map((it, i) => makeRowHtml(it,i)).join('');
-  // attach handlers for amount +/- and checkbox change
   document.querySelectorAll('#tbody .minus, #tbody .plus').forEach(btn=>{
     btn.onclick = (e)=>{
       const tr = e.target.closest('tr');
@@ -158,22 +166,28 @@ function render(){
 }
 
 async function onAdd(){
-  const object = $object.value.trim();
-  const addedDate = $date.value || new Date().toISOString().slice(0,10);
-  const amount = Math.max(1, Number($amount.value || 1));
-  if (!object) return alert('Please enter an object name');
-  const newItem = {
-    id: generateId(),
-    object,
-    amount,
-    addedDate,
-    addedAt: new Date().toISOString()
-  };
-  items.push(newItem);
-  $object.value = '';
-  $amount.value = 1;
-  render();
-  await saveItems(); // immediate save
+  try {
+    const object = $object.value.trim();
+    const addedDate = $date.value || new Date().toISOString().slice(0,10);
+    const amount = Math.max(1, Number($amount.value || 1));
+    if (!object) return alert('Please enter an object name');
+    const newItem = {
+      id: generateId(),
+      object,
+      amount,
+      addedDate,
+      addedAt: new Date().toISOString()
+    };
+    console.log('Adding item', newItem);
+    items.push(newItem);
+    $object.value = '';
+    $amount.value = 1;
+    render();
+    await saveItems(); // immediate save
+  } catch (err){
+    console.error('onAdd error', err);
+    alert('Error while adding (see console)');
+  }
 }
 
 async function onRemoveSelected(){
@@ -211,19 +225,19 @@ function saveItemsDebounced(){
 
 async function saveItems(){
   if (!listRowId){
-    // fallback: try to create row and retry
     await loadOrCreateListRow();
     if (!listRowId){ setStatus('Cannot create row'); return; }
   }
   setStatus('Saving...');
   const payload = { items };
+  console.log('Updating row', listRowId, payload);
   const { data, error } = await supabase.from('lists').update(payload).eq('id', listRowId).select().maybeSingle();
+  console.log('update result', {data, error});
   if (error){
     console.error('save error', error);
     setStatus('Save failed');
     return;
   }
-  // success
   items = data.items || [];
   setStatus('Saved');
 }
@@ -231,9 +245,7 @@ async function saveItems(){
 /* ============= helpers ============= */
 
 function generateId(){ return 'id-' + Math.random().toString(36).slice(2,10); }
-
 function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
 function setStatus(t){ $status.textContent = t || ''; }
 </script>
 </body>
