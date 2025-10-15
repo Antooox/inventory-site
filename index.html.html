@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Simple inventory</title>
   <style>
-    /* --- Basstyles --- */
     :root{
       --card-bg: #fff;
       --muted: #6b7280;
@@ -26,8 +25,6 @@
       margin:36px auto;
       padding:20px;
     }
-
-    /* Card */
     .card{
       background:var(--card-bg);
       border-radius:var(--radius);
@@ -36,11 +33,8 @@
     }
     h1{ margin:0 0 6px 0; font-size:28px; }
     p.lead{ color:var(--muted); margin:6px 0 18px 0; }
-
-    /* Top info */
     #rowInfo{ font-size:14px; color:var(--muted); margin-bottom:10px; }
 
-    /* Form layout (tight) */
     .form-top, .form-row, .controls {
       display:flex;
       gap:10px;
@@ -50,7 +44,7 @@
     }
     .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
     label{ font-size:14px; color:#334155; }
-    input[type="text"], input[type="date"]{
+    input[type="text"], input[type="date"], input[type="number"]{
       padding:10px 12px;
       height:44px;
       border-radius:8px;
@@ -58,6 +52,8 @@
       box-sizing:border-box;
       font-size:15px;
     }
+    input[type="number"] { width:110px; }
+
     .btn{
       border:0;
       border-radius:10px;
@@ -70,20 +66,29 @@
     .btn-ghost{ background:#f1f5f9; color:#0f1720; }
     .btn-undo{ background:#e6eef2; color:#0b5562; }
 
-    /* Table */
     table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
     thead th{ text-align:left; padding:12px 8px; color:#64748b; font-weight:700; border-bottom:1px solid #eef2f7; }
     tbody td{ padding:12px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
     .checkbox{ width:18px; height:18px; }
 
-    /* Buttons row */
+    .amount-controls { display:flex; gap:6px; align-items:center; }
+    .amt-btn {
+      background:#eef2f6;
+      border:1px solid #d1e6ea;
+      border-radius:6px;
+      padding:6px 8px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .amt-value { min-width:36px; text-align:center; padding:6px 4px; display:inline-block; }
+
     .actions{ display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; }
     .small { padding:8px 10px; font-size:14px; }
 
-    /* responsive */
     @media (max-width:640px){
       .form-top, .form-row, .controls { flex-direction:column; align-items:stretch; gap:8px; }
       .btn-add{ align-self:flex-end; }
+      input[type="number"]{ width:100%; }
     }
   </style>
 </head>
@@ -96,14 +101,19 @@
       <div id="rowInfo"></div>
 
       <div class="form-top">
-        <div class="field" style="flex:1;min-width:180px">
+        <div class="field" style="flex:1;min-width:160px">
           <label for="objectInput">Object</label>
           <input id="objectInput" type="text" placeholder="Ex: Ventil ABC-123" />
         </div>
 
-        <div class="field">
+        <div class="field" style="width:170px">
           <label for="dateInput">Added date</label>
           <input id="dateInput" type="date" />
+        </div>
+
+        <div class="field" style="width:130px">
+          <label for="amountInput">Amount</label>
+          <input id="amountInput" type="number" min="1" value="1" />
         </div>
 
         <div style="margin-left:auto">
@@ -117,12 +127,13 @@
             <tr>
               <th style="width:36px"><input id="selectAll" type="checkbox" class="checkbox" /></th>
               <th>Object</th>
+              <th style="width:140px">Amount</th>
               <th>Added date</th>
               <th>Added at</th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="4" style="color:#94a3b8;padding:18px;">Inga poster ännu</td></tr>
+            <tr><td colspan="5" style="color:#94a3b8;padding:18px;">Inga poster ännu</td></tr>
           </tbody>
         </table>
       </div>
@@ -138,9 +149,9 @@
   </div>
 
   <script>
-    // --- State & DOM ---
     const objectInput = document.getElementById('objectInput');
     const dateInput = document.getElementById('dateInput');
+    const amountInput = document.getElementById('amountInput');
     const addBtn = document.getElementById('addBtn');
     const tbody = document.getElementById('tbody');
     const removeBtn = document.getElementById('removeBtn');
@@ -149,12 +160,11 @@
     const selectAll = document.getElementById('selectAll');
     const rowInfo = document.getElementById('rowInfo');
 
-    let items = [];               // { id, object, addedDate, addedAt }
-    let lastRemoved = [];         // for undo
+    let items = [];               // { id, object, amount, addedDate, addedAt }
+    let lastRemoved = [];
     const STORAGE_KEY = 'inventory_items_v1';
     const STORAGE_ROW_KEY = 'inventory_current_row';
 
-    // initialize date input to today
     (function setDefaultDate(){
       const d = new Date();
       const yyyy = d.getFullYear();
@@ -163,22 +173,16 @@
       dateInput.value = `${yyyy}-${mm}-${dd}`;
     })();
 
-    // --- Helpers ---
     function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-    function save(){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }
-    function load(){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      items = raw ? JSON.parse(raw) : [];
-    }
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    function load(){ const raw = localStorage.getItem(STORAGE_KEY); items = raw ? JSON.parse(raw) : []; }
 
     function render(){
       tbody.innerHTML = '';
       if(!items.length){
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="4" style="color:#94a3b8;padding:18px;">Inga poster ännu</td>';
+        tr.innerHTML = '<td colspan="5" style="color:#94a3b8;padding:18px;">Inga poster ännu</td>';
         tbody.appendChild(tr);
         return;
       }
@@ -188,6 +192,13 @@
         tr.innerHTML = `
           <td><input class="row-check checkbox" type="checkbox" data-id="${item.id}"></td>
           <td>${escapeHtml(item.object)}</td>
+          <td>
+            <div class="amount-controls" data-id="${item.id}">
+              <button class="amt-btn btn-decr" aria-label="Minska" data-id="${item.id}">−</button>
+              <span class="amt-value" data-id="${item.id}">${item.amount}</span>
+              <button class="amt-btn btn-incr" aria-label="Öka" data-id="${item.id}">+</button>
+            </div>
+          </td>
           <td>${escapeHtml(item.addedDate)}</td>
           <td>${escapeHtml(item.addedAt)}</td>
         `;
@@ -195,34 +206,30 @@
       });
     }
 
-    function escapeHtml(s){
-      return String(s || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-    }
+    function escapeHtml(s){ return String(s || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
 
-    // add item from UI or programmatically
-    function addItem(obj, addedDate){
+    function addItem(obj, addedDate, amount){
       if(!obj || !obj.trim()) return;
+      amount = Number(amount) || 1;
+      if(amount < 1) amount = 1;
       const now = new Date();
       const item = {
         id: uid(),
         object: obj.trim(),
+        amount: amount,
         addedDate: addedDate || dateInput.value || '',
         addedAt: now.toLocaleString()
       };
-      items.unshift(item); // newest first
+      items.unshift(item);
       save();
       render();
-      // inform parent
       postToParent('itemAdded', { item });
     }
 
-    // programmatic API accessible globally
     window.addItemFromCode = function(payload){
-      // payload: {object, addedDate}
-      addItem(payload.object || payload.name || 'item', payload.addedDate || payload.date);
+      addItem(payload.object || payload.name || 'item', payload.addedDate || payload.date, payload.amount || payload.qty || 1);
     };
 
-    // remove selected rows
     function removeSelected(){
       const checks = Array.from(document.querySelectorAll('.row-check:checked'));
       if(!checks.length) return;
@@ -232,13 +239,11 @@
       save();
       render();
       postToParent('itemsRemoved', { removedIds: ids, removedItems: lastRemoved });
-      // reset select all
       selectAll.checked = false;
     }
 
     function undoRemove(){
       if(!lastRemoved.length) return;
-      // restore to top
       items = lastRemoved.concat(items);
       lastRemoved = [];
       save();
@@ -246,19 +251,17 @@
       postToParent('undoRemove', {});
     }
 
-    // export CSV (simple)
     function exportCSV(){
       if(!items.length) {
         alert('Inga poster att exportera');
         return;
       }
       const lines = [];
-      // header
-      lines.push(['Object','AddedDate','AddedAt'].join(','));
-      items.slice().reverse().forEach(it => { // export older->newer
-        // basic CSV escaping with quotes
+      lines.push(['Object','Amount','AddedDate','AddedAt'].join(','));
+      items.slice().reverse().forEach(it => {
         const row = [
           `"${it.object.replaceAll('"','""')}"`,
+          `"${it.amount}"`,
           `"${it.addedDate}"`,
           `"${it.addedAt}"`
         ];
@@ -275,17 +278,14 @@
       URL.revokeObjectURL(url);
     }
 
-    // postMessage helper (to parent)
     function postToParent(type, payload){
-      try{
-        window.parent.postMessage({ type, payload }, '*'); // '*' ok for now; in prod specify origin
-      }catch(e){ /* ignore */ }
+      try{ window.parent.postMessage({ type, payload }, '*'); }catch(e){}
     }
 
-    // --- Event listeners ---
     addBtn.addEventListener('click', () => {
-      addItem(objectInput.value, dateInput.value);
+      addItem(objectInput.value, dateInput.value, Number(amountInput.value || 1));
       objectInput.value = '';
+      amountInput.value = 1;
       objectInput.focus();
     });
 
@@ -293,13 +293,11 @@
     undoBtn.addEventListener('click', undoRemove);
     exportBtn.addEventListener('click', exportCSV);
 
-    // select all checkbox
     selectAll.addEventListener('change', (ev) => {
       const checks = Array.from(document.querySelectorAll('.row-check'));
       checks.forEach(c => c.checked = ev.target.checked);
     });
 
-    // delegate: when table changes, update selectAll state
     document.addEventListener('change', (ev) => {
       if(ev.target && ev.target.classList && ev.target.classList.contains('row-check')){
         const checks = Array.from(document.querySelectorAll('.row-check'));
@@ -308,10 +306,31 @@
       }
     });
 
-    // --- postMessage listener (parent -> iframe) ---
-    const ALLOWED_ORIGINS = []; // optional: fill if you want to restrict
+    // Delegate clicks for + / - buttons
+    document.addEventListener('click', (ev) => {
+      const t = ev.target;
+      if(t.matches('.btn-incr')){
+        const id = t.dataset.id;
+        changeAmount(id, 1);
+      } else if(t.matches('.btn-decr')){
+        const id = t.dataset.id;
+        changeAmount(id, -1);
+      }
+    });
+
+    function changeAmount(id, delta){
+      const idx = items.findIndex(it => it.id === id);
+      if(idx === -1) return;
+      items[idx].amount = Math.max(1, Number(items[idx].amount) + delta);
+      save();
+      render();
+      postToParent('amountChanged', { id: id, amount: items[idx].amount });
+    }
+
+    // postMessage listener
+    const ALLOWED_ORIGINS = [];
     window.addEventListener('message', (ev) => {
-      // We allow all for now (since parent may be Zeet). Uncomment to restrict:
+      // Optionally restrict by origin
       // if(ALLOWED_ORIGINS.length && !ALLOWED_ORIGINS.includes(ev.origin)) return;
       const data = ev.data || {};
       const t = data.type;
@@ -329,11 +348,8 @@
       }
     });
 
-    function showRow(row){
-      rowInfo.textContent = 'Row: ' + row;
-    }
+    function showRow(row){ rowInfo.textContent = 'Row: ' + row; }
 
-    // read ?row= from URL and prefill
     (function prefillFromQuery(){
       try{
         const params = new URLSearchParams(location.search);
@@ -348,11 +364,9 @@
       }catch(e){}
     })();
 
-    // --- init load ---
     load();
     render();
 
-    // expose a quick debug show
     window.__inventory = {
       addItemFromCode: window.addItemFromCode,
       items: () => items.slice()
