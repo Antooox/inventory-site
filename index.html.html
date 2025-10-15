@@ -1,392 +1,105 @@
 <!doctype html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shared inventory — ROW lists</title>
+  <title>Inventory — dropdown fix</title>
   <style>
-    :root{--accent:#11998e;--danger:#e05252;--muted:#6c7a86}
-    body{font-family:Inter,system-ui,Arial;margin:24px;background:#f6f7f8;color:#222}
-    .card{background:#fff;border-radius:10px;padding:22px;max-width:980px;margin:0 auto;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
-    h1{margin:0 0 6px;font-size:26px}
-    p.muted{margin:0 0 14px;color:var(--muted)}
-    label{display:block;margin:8px 0 6px;font-weight:600}
-    input[type=text], input[type=date], select, input[type=number]{width:100%;padding:10px;border-radius:8px;border:1px solid #e1e6ea;box-sizing:border-box}
-    .row{display:flex;gap:12px;align-items:center}
-    .col-2{flex:2} .col-1{flex:1}
-    button{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-    table{width:100%;border-collapse:collapse;margin-top:14px}
-    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
-    th{font-weight:700}
-    .small-btn{background:#fff;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
-    .controls{margin-top:14px;display:flex;gap:12px;align-items:center}
-    .danger{background:var(--danger);color:#fff;border:none;padding:8px 12px;border-radius:8px}
-    .muted{color:var(--muted);font-size:13px}
-    .amount-controls{display:flex;gap:8px;align-items:center}
-    .amount-controls button{background:#fff;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
-    input[type=number]{max-width:90px}
-    .center{display:flex;align-items:center}
-    .checkbox-cell{width:36px}
-    .error{color:var(--danger);font-weight:700;margin-top:8px}
-    .info{color:#0b74a6;margin-top:6px}
+    body { font-family: Inter, Arial, Helvetica, sans-serif; padding:20px; background:#f6f7f9; color:#222 }
+    .card { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:520px }
+    label { display:block; margin-bottom:8px; font-weight:600 }
+    select { width:100%; padding:8px 12px; border-radius:6px; border:1px solid #d8dce0 }
+    button { margin-top:12px; padding:8px 12px; border-radius:6px; border:none; cursor:pointer }
+    .muted { color:#6b7280; font-size:13px; margin-top:8px }
+    pre { background:#111; color:#fff; padding:8px; border-radius:6px; overflow:auto; max-height:120px }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Shared inventory</h1>
-    <p class="muted">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
-
     <label for="rowSelect">Select row</label>
-    <select id="rowSelect" aria-label="Select row"></select>
+    <select id="rowSelect">
+      <option value="">Laddar...</option>
+    </select>
 
-    <div style="height:12px"></div>
-
-    <label for="itemObject">Object</label>
-    <input type="text" id="itemObject" placeholder="Object — e.g. Valve ABC-123">
-
-    <div style="height:8px"></div>
-    <div class="row">
-      <div class="col-2">
-        <label for="itemDate">Added date</label>
-        <input type="date" id="itemDate">
-      </div>
-      <div class="col-1">
-        <label for="itemAmount">Amount</label>
-        <input type="number" id="itemAmount" min="1" value="1">
-      </div>
-      <div style="width:170px;align-self:flex-end">
-        <button id="addBtn" style="width:100%">Add to list</button>
-      </div>
+    <div>
+      <button id="refreshBtn">Hämta igen (force)</button>
     </div>
 
-    <table id="itemsTable" aria-live="polite">
-      <thead>
-        <tr>
-          <th class="checkbox-cell"></th>
-          <th>Object</th>
-          <th style="width:140px">Amount</th>
-          <th style="width:140px">Added date</th>
-          <th style="width:180px">Added at</th>
-        </tr>
-      </thead>
-      <tbody id="itemsBody">
-        <tr><td colspan="5" class="muted">No items yet</td></tr>
-      </tbody>
-    </table>
-
-    <div class="controls">
-      <button id="removeSelected" class="danger">Remove selected</button>
-      <button id="undoRemove" class="small-btn">Undo remove</button>
-      <button id="exportCsv" class="small-btn">Export CSV</button>
-      <div style="flex:1"></div>
-      <div id="status" class="muted">Status: idle</div>
-    </div>
-
-    <div id="debug" class="info" style="display:none"></div>
-    <div id="err" class="error" style="display:none"></div>
+    <p class="muted">Öppna webbläsarens Console för mer logg (F12). Se "Fetched rows" och "uniqueCount".</p>
   </div>
 
-<script>
-/* ========== CONFIG - (inline keys as requested) ========== */
-const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-/* ======================================================== */
+  <!-- Byt ut dessa med din Supabase-url och anon-key -->
+  <script type="module">
+    // --- CONFIG ---
+    const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co'; // ersätt
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY'; // ersätt
 
-const headers = {
-  'apikey': SUPABASE_ANON_KEY,
-  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-  'Content-Type': 'application/json'
-};
+    // --- IMPORT SUPABASE CLIENT FROM CDN (ingen build behövs) ---
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const rowSelect = document.getElementById('rowSelect');
-const itemObject = document.getElementById('itemObject');
-const itemDate = document.getElementById('itemDate');
-const itemAmount = document.getElementById('itemAmount');
-const addBtn = document.getElementById('addBtn');
-const itemsBody = document.getElementById('itemsBody');
-const statusEl = document.getElementById('status');
-const removeSelectedBtn = document.getElementById('removeSelected');
-const undoRemoveBtn = document.getElementById('undoRemove');
-const exportCsvBtn = document.getElementById('exportCsv');
-const debugEl = document.getElementById('debug');
-const errEl = document.getElementById('err');
+    // --- Enkel guard så dropdown inte fylls av misstag två gånger ---
+    window._rowsLoaded = false;
 
-let currentRow = null;
-let currentItems = [];
-let lastRemoved = [];
-let saveTimer = null;
-let saving = false;
-
-/* ---------- helpers ---------- */
-function setStatus(s){ statusEl.textContent = 'Status: ' + s; }
-function setDebug(s){ debugEl.style.display='block'; debugEl.textContent = s; }
-function setError(s){ errEl.style.display='block'; errEl.textContent = s; }
-function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
-function uid(len=8){ return Math.random().toString(36).slice(2,2+len) + Date.now().toString(36).slice(-4);}
-
-/* pre-fill dropdown immediately with row1..row20 so it's clickable even if fetch fails */
-function fillDefaultRows(){
-  const rows = Array.from({length:20}, (_,i)=>'row'+(i+1));
-  rowSelect.innerHTML = rows.map(r=>`<option value="${r}">${r.toUpperCase()}</option>`).join('');
-}
-
-/* fetch list of rows from supabase */
-async function fetchRows(){
-  const url = `${SUPABASE_URL}/rest/v1/lists?select=row`;
-  const res = await fetch(url, { headers });
-  if(!res.ok) throw new Error('fetchRows failed ' + res.status);
-  const arr = await res.json();
-  return arr.map(r => r.row);
-}
-
-/* create single row record */
-async function createRow(row){
-  const url = `${SUPABASE_URL}/rest/v1/lists`;
-  const body = { row, items: [] };
-  // if row exists, server will respond depending on uniqueness constraint
-  const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
-  return res;
-}
-
-/* ensure row1..row20 exist on server */
-async function ensureRows(){
-  setStatus('ensuring rows exist...');
-  setDebug('ensuring rows exist on supabase...');
-  try{
-    const existing = await fetchRows().catch(()=>[]);
-    const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
-    const missing = desired.filter(r=>!existing.includes(r));
-    for(const r of missing){
-      try{ await createRow(r); } catch(e){ console.warn('createRow failed', r, e); }
-    }
-    setStatus('rows ensured');
-    setDebug('rows ensured (local + server).');
-  } catch(e){
-    console.warn(e);
-    setStatus('rows: ensure failed');
-    setDebug('ensureRows error: ' + e.message);
-  }
-}
-
-/* populate dropdown — try to use supabase but don't block, we already prefilled */
-async function populateDropdown(){
-  setStatus('loading rows...');
-  try{
-    const rows = await fetchRows();
-    if(rows && rows.length>0){
-      // ensure we show row1..row20 first, then any extras
-      const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
-      const all = Array.from(new Set([...desired, ...rows])).sort((a,b)=>{
-        // sort rowN numerically if pattern matches, else alphabetically
-        const na = Number(a.replace(/[^\d]/g,''))||0;
-        const nb = Number(b.replace(/[^\d]/g,''))||0;
-        return na - nb || a.localeCompare(b);
-      });
-      rowSelect.innerHTML = all.map(r=>`<option value="${r}">${r.toUpperCase()}</option>`).join('');
-      setStatus('rows loaded from server');
-      setDebug('rows loaded from server: ' + all.join(', '));
-    } else {
-      setDebug('no rows returned from server, using defaults');
-      setStatus('using default rows');
-    }
-    currentRow = rowSelect.value;
-  } catch(e){
-    console.warn('populateDropdown failed', e);
-    setStatus('failed to load rows from server — using defaults');
-    setDebug('populateDropdown error: ' + e.message);
-  }
-}
-
-/* load items for a specific row */
-async function loadItemsForRow(row){
-  clearError();
-  setStatus('loading items for ' + row);
-  try{
-    const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(row)}`;
-    const res = await fetch(url, { headers });
-    if(!res.ok){ throw new Error('load failed ' + res.status); }
-    const arr = await res.json();
-    const items = (arr[0] && arr[0].items) ? arr[0].items : [];
-    currentItems = items;
-    renderItems();
-    setStatus('loaded');
-  } catch(e){
-    console.error(e);
-    setError('Could not load items: ' + e.message);
-    setStatus('load failed');
-  }
-}
-
-/* render items into table */
-function renderItems(){
-  itemsBody.innerHTML = '';
-  if(!currentItems || currentItems.length === 0){
-    const tr = document.createElement('tr');
-    const td = document.createElement('td'); td.colSpan = 5; td.className='muted'; td.textContent='No items yet';
-    tr.appendChild(td); itemsBody.appendChild(tr); return;
-  }
-  currentItems.forEach((it, idx)=>{
-    const tr = document.createElement('tr');
-
-    const chTd = document.createElement('td'); chTd.className = 'checkbox-cell';
-    const chk = document.createElement('input'); chk.type='checkbox'; chk.dataset.idx = idx;
-    chTd.appendChild(chk);
-
-    const objTd = document.createElement('td'); objTd.textContent = it.object || '';
-
-    const amountTd = document.createElement('td');
-    const amountWrap = document.createElement('div'); amountWrap.className='amount-controls';
-    const minus = document.createElement('button'); minus.textContent='-'; minus.className='small-btn';
-    const num = document.createElement('span'); num.style.minWidth='26px'; num.style.display='inline-block'; num.style.textAlign='center'; num.textContent = (it.amount || 1);
-    const plus = document.createElement('button'); plus.textContent='+'; plus.className='small-btn';
-    minus.onclick = ()=>{ adjustAmount(idx, -1); };
-    plus.onclick = ()=>{ adjustAmount(idx, +1); };
-    amountWrap.appendChild(minus); amountWrap.appendChild(num); amountWrap.appendChild(plus);
-    amountTd.appendChild(amountWrap);
-
-    const dateTd = document.createElement('td'); dateTd.textContent = it.added_date || '';
-
-    const atTd = document.createElement('td'); atTd.textContent = it.added_at || '';
-
-    tr.appendChild(chTd); tr.appendChild(objTd); tr.appendChild(amountTd); tr.appendChild(dateTd); tr.appendChild(atTd);
-    itemsBody.appendChild(tr);
-  });
-}
-
-/* adjust amount for item index */
-function adjustAmount(idx, delta){
-  const it = currentItems[idx];
-  if(!it) return;
-  let newAmt = Number(it.amount || 0) + delta;
-  if(newAmt < 0) newAmt = 0;
-  currentItems[idx].amount = newAmt;
-  renderItems();
-  scheduleSave();
-}
-
-/* schedule a debounced save */
-function scheduleSave(){
-  if(saveTimer) clearTimeout(saveTimer);
-  setStatus('changes pending...');
-  saveTimer = setTimeout(()=>{ saveItemsToCloud(); }, 700);
-}
-
-/* save currentItems to supabase (PATCH) */
-async function saveItemsToCloud(){
-  if(!currentRow) return;
-  if(saving) return;
-  saving = true;
-  setStatus('saving...');
-  try{
-    const url = `${SUPABASE_URL}/rest/v1/lists?row=eq.${encodeURIComponent(currentRow)}`;
-    const body = { items: currentItems };
-    const h = Object.assign({}, headers, { 'Prefer': 'return=representation' });
-    const res = await fetch(url, { method:'PATCH', headers:h, body: JSON.stringify(body) });
-    if(!res.ok){ throw new Error('save failed ' + res.status); }
-    setStatus('saved');
-  } catch(e){
-    console.error(e);
-    setError('Save failed: ' + e.message);
-    setStatus('save failed');
-  } finally {
-    saving = false;
-  }
-}
-
-/* add new item from inputs */
-function addItemFromForm(){
-  const obj = itemObject.value && itemObject.value.trim();
-  if(!obj){ alert('Object name is required'); return; }
-  const dateVal = itemDate.value || new Date().toISOString().slice(0,10);
-  const amountVal = Number(itemAmount.value) || 1;
-  const newItem = {
-    id: uid(6),
-    object: obj,
-    amount: amountVal,
-    added_date: dateVal,
-    added_at: new Date().toLocaleString()
-  };
-  currentItems.push(newItem);
-  renderItems();
-  itemObject.value=''; itemAmount.value = 1;
-  scheduleSave();
-}
-
-/* remove selected items */
-function removeSelected(){
-  const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]'));
-  const idxs = checks.filter(c=>c.checked).map(c=>Number(c.dataset.idx)).sort((a,b)=>b-a);
-  if(idxs.length === 0) return alert('No items selected');
-  lastRemoved = idxs.map(i => currentItems[i]);
-  for(const i of idxs){ currentItems.splice(i,1); }
-  renderItems();
-  scheduleSave();
-}
-
-/* undo last remove */
-function undoRemove(){
-  if(!lastRemoved || lastRemoved.length === 0) return alert('Nothing to undo');
-  currentItems = currentItems.concat(lastRemoved);
-  lastRemoved = [];
-  renderItems();
-  scheduleSave();
-}
-
-/* export CSV */
-function exportCsv(){
-  if(!currentItems || currentItems.length === 0) return alert('No items to export');
-  const rows = [['id','object','amount','added_date','added_at']];
-  currentItems.forEach(it => rows.push([it.id||'', it.object||'', it.amount||'', it.added_date||'', it.added_at||'']));
-  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = (currentRow || 'list') + '.csv';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/* row change handler */
-async function onRowChange(){
-  currentRow = rowSelect.value;
-  await loadItemsForRow(currentRow);
-}
-
-/* init: fill defaults, populate, set events */
-async function init(){
-  setStatus('initializing...');
-  fillDefaultRows();             // immediate fallback so select is clickable
-  await populateDropdown();      // try to replace with server rows
-  rowSelect.addEventListener('change', onRowChange);
-  addBtn.addEventListener('click', addItemFromForm);
-  removeSelectedBtn.addEventListener('click', removeSelected);
-  undoRemoveBtn.addEventListener('click', undoRemove);
-  exportCsvBtn.addEventListener('click', exportCsv);
-
-  itemDate.value = new Date().toISOString().slice(0,10);
-  currentRow = rowSelect.value;
-  await ensureRows();            // make sure server has row1..row20
-  await loadItemsForRow(currentRow);
-
-  setInterval(async () => {
-    try{
-      const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(currentRow)}`;
-      const res = await fetch(url, { headers });
-      if(!res.ok) return;
-      const arr = await res.json();
-      const remoteItems = (arr[0] && arr[0].items) ? arr[0].items : [];
-      if(JSON.stringify(remoteItems) !== JSON.stringify(currentItems)){
-        currentItems = remoteItems;
-        renderItems();
-        setStatus('List updated from cloud (remote changes).');
+    // loadRows: hämtar, deduplikar på row_name och renderar
+    async function loadRows(force = false) {
+      if (window._rowsLoaded && !force) {
+        console.log('loadRows: redan inläst — använd refresh för att tvinga om');
+        return;
       }
-    }catch(e){}
-  }, 6000);
 
-  setStatus('ready');
-}
+      console.trace('loadRows called'); // om du ser flera traces vet du att funktionen körs flera gånger
 
-init().catch(e=>{ console.error(e); setError('Init failed: '+ e.message); setStatus('init failed'); });
+      const { data, error } = await supabase
+        .from('rows_table') // byt till ditt tabellnamn
+        .select('id, row_name')
+        .order('row_name', { ascending: true });
 
-</script>
+      if (error) {
+        console.error('Supabase error', error);
+        const sel = document.getElementById('rowSelect');
+        sel.innerHTML = '<option value="">Fel vid hämtning</option>';
+        return;
+      }
+
+      console.log('Fetched rows', data);
+
+      // Dedupe baserat på row_name (behåller första förekomsten)
+      const uniqueMap = new Map();
+      for (const item of data) {
+        if (!uniqueMap.has(item.row_name)) uniqueMap.set(item.row_name, item);
+      }
+      const unique = [...uniqueMap.values()];
+
+      console.log('uniqueCount:', unique.length, 'rawCount:', data.length);
+      if (unique.length !== data.length) console.warn('Dubbletter hittades i svaret och togs bort (client-side)');
+
+      // Rendera dropdown
+      const sel = document.getElementById('rowSelect');
+      sel.innerHTML = '';
+      if (unique.length === 0) {
+        const o = document.createElement('option');
+        o.value = '';
+        o.textContent = 'Inga rader';
+        sel.appendChild(o);
+      } else {
+        unique.forEach(r => {
+          const o = document.createElement('option');
+          o.value = r.id; // använd id om du vill
+          o.textContent = r.row_name;
+          sel.appendChild(o);
+        });
+      }
+
+      window._rowsLoaded = true;
+    }
+
+    // Koppla knappen och ladda initialt
+    document.getElementById('refreshBtn').addEventListener('click', () => loadRows(true));
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadRows();
+    });
+  </script>
 </body>
 </html>
