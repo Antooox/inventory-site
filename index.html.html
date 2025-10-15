@@ -1,117 +1,465 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Inventory — dropdown fix</title>
+  <title>Shared inventory — ROW</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Inter, Arial, Helvetica, sans-serif; padding:20px; background:#f6f7f9; color:#222 }
-    .card { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:720px }
-    label { display:block; margin-bottom:8px; font-weight:600 }
-    select { width:100%; padding:8px 12px; border-radius:6px; border:1px solid #d8dce0 }
-    button { margin-top:12px; padding:8px 12px; border-radius:6px; border:none; cursor:pointer }
-    .muted { color:#6b7280; font-size:13px; margin-top:8px }
-    pre { background:#111; color:#fff; padding:8px; border-radius:6px; overflow:auto; max-height:120px }
-    .hint { font-size:13px; color:#374151; margin-top:10px }
+    :root{
+      --bg:#f6f7f9; --card:#fff; --accent:#0f9a83; --danger:#e15757; --muted:#707b8a;
+      --shadow: 0 6px 18px rgba(14,30,37,0.08);
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{background:var(--bg);color:#111;padding:28px;}
+    .page {max-width:760px;margin:0 auto;}
+    h1{font-size:28px;margin:0 0 18px 0;}
+    .card{background:var(--card);border-radius:12px;padding:22px;box-shadow:var(--shadow);margin-bottom:18px;}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+    .row{display:flex;gap:12px;align-items:center}
+    .row.col{flex-direction:column;align-items:stretch;}
+    select,input[type="text"],input[type="date"],input[type="number"]{
+      border:1px solid #e6edf1;border-radius:8px;padding:10px 12px;font-size:15px;background:#fff;outline:none;
+      box-sizing:border-box;
+    }
+    select{height:44px;}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:8px;}
+    .btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid #d6e7e2;}
+    .btn.danger{background:var(--danger);color:#fff;}
+    .table{width:100%;border-collapse:collapse;margin-top:18px;}
+    .table th, .table td{padding:12px 8px;border-bottom:1px solid #eef2f4;text-align:left;vertical-align:middle;}
+    .table th{font-weight:700;color:#333;}
+    .amountBox{display:flex;align-items:center;gap:8px}
+    .smallBtn{border:1px solid #d6e6e4;background:#fff;padding:6px 8px;border-radius:6px;cursor:pointer;}
+    .smallBtn:active{transform:translateY(1px)}
+    .checkbox{width:18px;height:18px}
+    .muted{color:var(--muted);font-size:13px}
+    .footerRow{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+    .hidden{display:none !important}
+    /* responsive */
+    @media (max-width:640px){
+      .row{flex-direction:column;align-items:stretch}
+      .controls{flex-direction:column;align-items:stretch}
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h3>Inventory — dropdown</h3>
-    <label for="rowSelect">Select row</label>
-    <select id="rowSelect">
-      <option value="">Laddar...</option>
-    </select>
+  <div class="page">
+    <h1>ROW 1 Stegra</h1>
 
-    <div>
-      <button id="refreshBtn">Hämta igen (force)</button>
-      <button id="clearBtn" style="margin-left:8px;">Rensa och kör om</button>
+    <div class="card" id="main-card">
+      <div style="margin-bottom:10px">
+        <strong style="font-size:18px">Shared inventory</strong>
+        <div class="muted" style="margin-top:6px;font-size:13px">Everyone who opens this page sees the same list. Changes autosave automatically.</div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <div style="flex:1">
+          <label for="rowSelect">Select row</label>
+          <select id="rowSelect"></select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px;">
+        <div style="flex:1">
+          <label for="objInput">Object</label>
+          <input id="objInput" type="text" placeholder="Object — e.g. Valve ABC-123">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div style="width:160px">
+          <label for="dateInput">Added date</label>
+          <input id="dateInput" type="date">
+        </div>
+
+        <div style="width:120px">
+          <label for="amountInput">Amount</label>
+          <input id="amountInput" type="number" min="1" value="1" style="width:100%;box-sizing:border-box">
+        </div>
+
+        <div style="margin-left:auto;align-self:flex-end">
+          <button class="btn" id="addBtn">Add to list</button>
+        </div>
+      </div>
+
+      <table class="table" id="itemsTable" aria-live="polite">
+        <thead>
+          <tr>
+            <th style="width:36px"></th>
+            <th>Object</th>
+            <th style="width:120px">Amount</th>
+            <th style="width:120px">Added date</th>
+            <th style="width:160px">Added at</th>
+          </tr>
+        </thead>
+        <tbody id="itemsTbody">
+          <tr><td colspan="5" class="muted" style="padding:18px">No items yet</td></tr>
+        </tbody>
+      </table>
+
+      <div class="footerRow" style="margin-top:10px">
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn danger" id="removeBtn">Remove selected</button>
+          <button class="btn ghost" id="undoBtn">Undo remove</button>
+          <button class="btn ghost" id="exportBtn">Export CSV</button>
+        </div>
+
+        <div id="statusText" class="muted" style="font-size:13px">Status: ready</div>
+      </div>
     </div>
-
-    <p class="muted">Öppna webbläsarens Console (F12) för loggar. Kolla efter "Fetched rows" och "uniqueCount".</p>
-
-    <div class="hint">OBS: Denna fil ligger i klienten och använder din <strong>anon</strong>-nyckel. För produktion: använd server-side eller begränsa rights.</div>
   </div>
 
-  <script type="module">
-    // --- KONFIGURATION (Ändra TABLE_NAME om din tabell heter något annat) ---
-    const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-    const TABLE_NAME = 'rows_table'; // <-- byt namn om du använder annat
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+  <script>
+    // ------------ CONFIG (you asked to embed keys) -------------
+    const SUPABASE_URL = "https://xlgjmznrifbshgcrzjyi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY";
+    // -----------------------------------------------------------
 
-    // --- Importera klient (CDN) ---
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // create client
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // --- Enkel guard så dropdown inte fylls flera gånger ---
-    window._rowsLoaded = false;
+    // UI refs
+    const rowSelect = document.getElementById('rowSelect');
+    const objInput = document.getElementById('objInput');
+    const dateInput = document.getElementById('dateInput');
+    const amountInput = document.getElementById('amountInput');
+    const addBtn = document.getElementById('addBtn');
+    const itemsTbody = document.getElementById('itemsTbody');
+    const statusText = document.getElementById('statusText');
+    const removeBtn = document.getElementById('removeBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const exportBtn = document.getElementById('exportBtn');
 
-    // Ladda och rendera rader
-    async function loadRows(force = false) {
-      if (window._rowsLoaded && !force) {
-        console.log('loadRows: redan inläst — använd refresh för att tvinga om');
-        return;
-      }
+    let currentRow = null;
+    let currentItems = []; // array of items
+    let undoStack = [];
 
-      console.trace('loadRows called');
-
-      const { data, error } = await supabase
-        .from(TABLE_NAME)
-        .select('id, row_name')
-        .order('row_name', { ascending: true });
-
-      if (error) {
-        console.error('Supabase error', error);
-        const sel = document.getElementById('rowSelect');
-        sel.innerHTML = '<option value="">Fel vid hämtning</option>';
-        return;
-      }
-
-      console.log('Fetched rows', data);
-      console.table(data.map(d => ({ id: d.id, name: d.row_name })));
-
-      // Dedupe klient-side på row_name
-      const uniqueMap = new Map();
-      for (const item of data) {
-        if (!uniqueMap.has(item.row_name)) uniqueMap.set(item.row_name, item);
-      }
-      const unique = [...uniqueMap.values()];
-
-      console.log('uniqueCount:', unique.length, 'rawCount:', data.length);
-      if (unique.length !== data.length) console.warn('Dubbletter hittades i svaret och togs bort (client-side)');
-
-      // Rendera dropdown
-      const sel = document.getElementById('rowSelect');
-      sel.innerHTML = '';
-      if (unique.length === 0) {
-        const o = document.createElement('option');
-        o.value = '';
-        o.textContent = 'Inga rader';
-        sel.appendChild(o);
-      } else {
-        unique.forEach(r => {
-          const o = document.createElement('option');
-          o.value = r.id;
-          o.textContent = r.row_name;
-          sel.appendChild(o);
-        });
-      }
-
-      window._rowsLoaded = true;
+    // helper uuid
+    function uuid(){
+      return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,9);
     }
 
-    // Buttons
-    document.getElementById('refreshBtn').addEventListener('click', () => loadRows(true));
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      window._rowsLoaded = false;
-      document.getElementById('rowSelect').innerHTML = '<option value="">Laddar...</option>';
-      loadRows(true);
-    });
+    function setStatus(t){
+      statusText.textContent = t;
+    }
 
-    // Kör när sidan är redo
-    document.addEventListener('DOMContentLoaded', () => {
-      loadRows();
+    // populate dropdown immediately with ROW1..ROW20 so user always sees options
+    function populateDefaultSelect(){
+      rowSelect.innerHTML = '';
+      for(let i=1;i<=20;i++){
+        const v = `ROW${i}`;
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        rowSelect.appendChild(opt);
+      }
+      // pick first if nothing selected
+      if(!currentRow){
+        currentRow = rowSelect.options[0].value;
+        rowSelect.value = currentRow;
+      }
+    }
+
+    // try to fetch rows from DB; if none, upsert defaults (safe)
+    async function ensureRowsInDb(){
+      try{
+        setStatus('Syncing rows with server…');
+        // read any rows
+        const { data, error } = await supabase
+          .from('lists')
+          .select('row')
+          .order('row', { ascending: true })
+          .limit(100);
+
+        if(error){
+          console.warn('ensureRowsInDb: select error', error);
+          setStatus('Could not read rows from server (continuing with local list)');
+          return;
+        }
+
+        if(Array.isArray(data) && data.length > 0){
+          // use server list to populate select (but keep default options as fallback)
+          rowSelect.innerHTML = '';
+          data.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.row;
+            opt.textContent = r.row;
+            rowSelect.appendChild(opt);
+          });
+          // keep currentRow if possible otherwise pick first
+          if(!currentRow || ![...rowSelect.options].some(o=>o.value===currentRow)){
+            currentRow = rowSelect.options[0].value;
+          }
+          rowSelect.value = currentRow;
+          setStatus('Rows loaded from server');
+        } else {
+          // server empty — insert default rows (upsert so safe)
+          const defaultRows = Array.from({length:20}, (_,i) => ({row:`ROW${i+1}`}));
+          const { error: upsertErr } = await supabase
+            .from('lists')
+            .upsert(defaultRows, { onConflict: 'row' });
+          if(upsertErr){
+            console.warn('ensureRowsInDb: upsert error', upsertErr);
+            setStatus('Could not create default rows on server (continuing locally)');
+            return;
+          }
+          // after upsert, we can keep local dropdown (already populated) and continue
+          setStatus('Default rows ensured (server)');
+        }
+      }catch(err){
+        console.error('ensureRowsInDb', err);
+        setStatus('Error syncing rows (continuing locally)');
+      }
+    }
+
+    async function fetchItemsForCurrentRow(){
+      if(!currentRow) return;
+      setStatus('Loading items…');
+      try{
+        const { data, error } = await supabase
+          .from('lists')
+          .select('items')
+          .eq('row', currentRow)
+          .maybeSingle();
+
+        if(error){
+          console.error('fetchItemsForCurrentRow error', error);
+          setStatus('Error loading items');
+          return;
+        }
+        // maybeSingle returns null if none
+        currentItems = (data && data.items) ? data.items : [];
+        renderItems();
+        setStatus('List updated from cloud (remote changes).');
+      }catch(e){
+        console.error(e);
+        setStatus('Error fetching items');
+      }
+    }
+
+    function renderItems(){
+      itemsTbody.innerHTML = '';
+      if(!currentItems || currentItems.length === 0){
+        itemsTbody.innerHTML = '<tr><td colspan="5" class="muted" style="padding:18px">No items yet</td></tr>';
+        return;
+      }
+      currentItems.forEach(item => {
+        const tr = document.createElement('tr');
+
+        // checkbox
+        const tdCheck = document.createElement('td');
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.className = 'checkbox';
+        chk.dataset.id = item.id;
+        tdCheck.appendChild(chk);
+        tr.appendChild(tdCheck);
+
+        // object
+        const tdObj = document.createElement('td');
+        tdObj.textContent = item.object || '';
+        tr.appendChild(tdObj);
+
+        // amount with - and + buttons
+        const tdAmount = document.createElement('td');
+        const wrapper = document.createElement('div');
+        wrapper.className = 'amountBox';
+        const minus = document.createElement('button');
+        minus.className = 'smallBtn';
+        minus.textContent = '-';
+        minus.title = 'Decrease';
+        minus.addEventListener('click', (ev) => { ev.preventDefault(); changeAmount(item.id, -1); });
+        const amt = document.createElement('span');
+        amt.style.minWidth = '28px';
+        amt.style.display = 'inline-block';
+        amt.style.textAlign = 'center';
+        amt.textContent = item.amount;
+        const plus = document.createElement('button');
+        plus.className = 'smallBtn';
+        plus.textContent = '+';
+        plus.title = 'Increase';
+        plus.addEventListener('click', (ev) => { ev.preventDefault(); changeAmount(item.id, +1); });
+        wrapper.appendChild(minus);
+        wrapper.appendChild(amt);
+        wrapper.appendChild(plus);
+        tdAmount.appendChild(wrapper);
+        tr.appendChild(tdAmount);
+
+        // added date
+        const tdDate = document.createElement('td');
+        tdDate.textContent = item.added_date || '';
+        tr.appendChild(tdDate);
+
+        // added at
+        const tdAddedAt = document.createElement('td');
+        tdAddedAt.textContent = item.added_at ? new Date(item.added_at).toLocaleString() : '';
+        tr.appendChild(tdAddedAt);
+
+        itemsTbody.appendChild(tr);
+      });
+    }
+
+    // Upsert to ensure the row exists and items are set atomically
+    async function saveItemsToServer(newItems, showStatus=true){
+      if(!currentRow) return false;
+      if(showStatus) setStatus('Saving…');
+      try{
+        const payload = { row: currentRow, items: newItems };
+        const { data, error } = await supabase
+          .from('lists')
+          .upsert([payload], { onConflict: 'row' }); // will insert or update by row
+
+        if(error){
+          console.error('saveItemsToServer upsert error', error);
+          setStatus('Save failed');
+          return false;
+        }
+        // success
+        if(showStatus) setStatus('Saved');
+        currentItems = newItems;
+        return true;
+      }catch(e){
+        console.error('saveItemsToServer', e);
+        setStatus('Save failed');
+        return false;
+      }
+    }
+
+    async function addItem(){
+      const obj = objInput.value.trim();
+      const added_date = dateInput.value || (new Date()).toISOString().slice(0,10);
+      let amount = parseInt(amountInput.value || '1', 10);
+      if(!obj || !amount || amount <= 0){
+        alert('Please enter object name and positive amount.');
+        return;
+      }
+      const item = {
+        id: uuid(),
+        object: obj,
+        amount: amount,
+        added_date: added_date,
+        added_at: (new Date()).toISOString()
+      };
+      const newItems = [...currentItems, item];
+      const ok = await saveItemsToServer(newItems);
+      if(ok){
+        objInput.value = '';
+        amountInput.value = '1';
+        undoStack.push({action:'add', item});
+        renderItems();
+      }
+    }
+
+    async function changeAmount(id, delta){
+      const idx = currentItems.findIndex(i => i.id === id);
+      if(idx === -1) return;
+      const old = currentItems[idx].amount;
+      let newAmount = old + delta;
+      if(newAmount < 0) newAmount = 0;
+      currentItems[idx].amount = newAmount;
+      const ok = await saveItemsToServer([...currentItems]);
+      if(ok){
+        undoStack.push({action:'change', id, from: old, to: newAmount});
+        renderItems();
+      }
+    }
+
+    async function removeSelected(){
+      const checks = Array.from(itemsTbody.querySelectorAll('input[type="checkbox"]:checked'));
+      if(checks.length === 0){ alert('Select items to remove'); return; }
+      if(!confirm(`Remove ${checks.length} selected item(s)?`)) return;
+      const ids = checks.map(c => c.dataset.id);
+      const removedItems = currentItems.filter(i => ids.includes(i.id));
+      const newItems = currentItems.filter(i => !ids.includes(i.id));
+      const ok = await saveItemsToServer(newItems);
+      if(ok){
+        undoStack.push({action:'remove', items: removedItems});
+        renderItems();
+      }
+    }
+
+    async function undoLast(){
+      const last = undoStack.pop();
+      if(!last) { alert('Nothing to undo'); return; }
+      if(last.action === 'add'){
+        const newItems = currentItems.filter(i => i.id !== last.item.id);
+        await saveItemsToServer(newItems);
+        currentItems = newItems;
+        renderItems();
+      } else if(last.action === 'remove'){
+        const newItems = [...currentItems, ...last.items];
+        await saveItemsToServer(newItems);
+        currentItems = newItems;
+        renderItems();
+      } else if(last.action === 'change'){
+        const idx = currentItems.findIndex(i => i.id === last.id);
+        if(idx !== -1){
+          currentItems[idx].amount = last.from;
+          await saveItemsToServer([...currentItems]);
+          renderItems();
+        }
+      }
+    }
+
+    function exportCSV(){
+      if(!currentItems || currentItems.length === 0){ alert('No items'); return; }
+      const rows = [['object','amount','added_date','added_at']];
+      currentItems.forEach(i => rows.push([i.object, i.amount, i.added_date || '', i.added_at || '']));
+      const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${currentRow || 'list'}.csv`; document.body.appendChild(a); a.click();
+      a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // Polling refresher
+    let pollInterval = null;
+    function startPolling(){
+      if(pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
+        fetchItemsForCurrentRow().catch(()=>{});
+      }, 3500);
+    }
+
+    // event listeners
+    addBtn.addEventListener('click', addItem);
+    rowSelect.addEventListener('change', async (e) => {
+      currentRow = e.target.value;
+      await fetchItemsForCurrentRow();
     });
+    removeBtn.addEventListener('click', removeSelected);
+    undoBtn.addEventListener('click', undoLast);
+    exportBtn.addEventListener('click', exportCSV);
+
+    // init
+    (async function init(){
+      dateInput.value = new Date().toISOString().slice(0,10);
+      setStatus('Initializing…');
+
+      // 1) show default rows right away so dropdown is usable even before server responses
+      populateDefaultSelect();
+
+      // 2) try to ensure rows exist on server and if server has rows prefer those
+      await ensureRowsInDb();
+
+      // 3) set currentRow (respect previously selected)
+      if(!currentRow && rowSelect.options.length>0){
+        currentRow = rowSelect.options[0].value;
+        rowSelect.value = currentRow;
+      }
+
+      // 4) fetch items for chosen row
+      await fetchItemsForCurrentRow();
+
+      // 5) start polling remote for updates
+      startPolling();
+
+      setStatus('Ready');
+    })();
   </script>
 </body>
 </html>
