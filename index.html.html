@@ -27,6 +27,8 @@
     input[type=number]{max-width:90px}
     .center{display:flex;align-items:center}
     .checkbox-cell{width:36px}
+    .error{color:var(--danger);font-weight:700;margin-top:8px}
+    .info{color:#0b74a6;margin-top:6px}
   </style>
 </head>
 <body>
@@ -35,7 +37,7 @@
     <p class="muted">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
 
     <label for="rowSelect">Select row</label>
-    <select id="rowSelect"></select>
+    <select id="rowSelect" aria-label="Select row"></select>
 
     <div style="height:12px"></div>
 
@@ -79,6 +81,9 @@
       <div style="flex:1"></div>
       <div id="status" class="muted">Status: idle</div>
     </div>
+
+    <div id="debug" class="info" style="display:none"></div>
+    <div id="err" class="error" style="display:none"></div>
   </div>
 
 <script>
@@ -103,6 +108,8 @@ const statusEl = document.getElementById('status');
 const removeSelectedBtn = document.getElementById('removeSelected');
 const undoRemoveBtn = document.getElementById('undoRemove');
 const exportCsvBtn = document.getElementById('exportCsv');
+const debugEl = document.getElementById('debug');
+const errEl = document.getElementById('err');
 
 let currentRow = null;
 let currentItems = [];
@@ -112,9 +119,18 @@ let saving = false;
 
 /* ---------- helpers ---------- */
 function setStatus(s){ statusEl.textContent = 'Status: ' + s; }
+function setDebug(s){ debugEl.style.display='block'; debugEl.textContent = s; }
+function setError(s){ errEl.style.display='block'; errEl.textContent = s; }
+function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
 function uid(len=8){ return Math.random().toString(36).slice(2,2+len) + Date.now().toString(36).slice(-4);}
 
-/* fetch list of rows */
+/* pre-fill dropdown immediately with row1..row20 so it's clickable even if fetch fails */
+function fillDefaultRows(){
+  const rows = Array.from({length:20}, (_,i)=>'row'+(i+1));
+  rowSelect.innerHTML = rows.map(r=>`<option value="${r}">${r.toUpperCase()}</option>`).join('');
+}
+
+/* fetch list of rows from supabase */
 async function fetchRows(){
   const url = `${SUPABASE_URL}/rest/v1/lists?select=row`;
   const res = await fetch(url, { headers });
@@ -127,52 +143,63 @@ async function fetchRows(){
 async function createRow(row){
   const url = `${SUPABASE_URL}/rest/v1/lists`;
   const body = { row, items: [] };
+  // if row exists, server will respond depending on uniqueness constraint
   const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
-  // 201 created or 409 conflict etc. ignore errors
   return res;
 }
 
-/* ensure row1..row20 exist */
+/* ensure row1..row20 exist on server */
 async function ensureRows(){
   setStatus('ensuring rows exist...');
-  const existing = await fetchRows();
-  const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
-  const missing = desired.filter(r=>!existing.includes(r));
-  for(const r of missing){
-    try{ await createRow(r); } catch(e){ /* ignore */ }
+  setDebug('ensuring rows exist on supabase...');
+  try{
+    const existing = await fetchRows().catch(()=>[]);
+    const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
+    const missing = desired.filter(r=>!existing.includes(r));
+    for(const r of missing){
+      try{ await createRow(r); } catch(e){ console.warn('createRow failed', r, e); }
+    }
+    setStatus('rows ensured');
+    setDebug('rows ensured (local + server).');
+  } catch(e){
+    console.warn(e);
+    setStatus('rows: ensure failed');
+    setDebug('ensureRows error: ' + e.message);
   }
-  setStatus('rows ensured');
-  return desired;
 }
 
-/* populate dropdown */
+/* populate dropdown — try to use supabase but don't block, we already prefilled */
 async function populateDropdown(){
   setStatus('loading rows...');
   try{
-    let rows = await fetchRows();
-    if(rows.length === 0){
-      rows = await ensureRows();
-    } else {
+    const rows = await fetchRows();
+    if(rows && rows.length>0){
+      // ensure we show row1..row20 first, then any extras
       const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
-      for(const r of desired){
-        if(!rows.includes(r)){ try{ await createRow(r); rows.push(r); } catch(e){} }
-      }
-      rows = Array.from(new Set(rows)).sort();
+      const all = Array.from(new Set([...desired, ...rows])).sort((a,b)=>{
+        // sort rowN numerically if pattern matches, else alphabetically
+        const na = Number(a.replace(/[^\d]/g,''))||0;
+        const nb = Number(b.replace(/[^\d]/g,''))||0;
+        return na - nb || a.localeCompare(b);
+      });
+      rowSelect.innerHTML = all.map(r=>`<option value="${r}">${r.toUpperCase()}</option>`).join('');
+      setStatus('rows loaded from server');
+      setDebug('rows loaded from server: ' + all.join(', '));
+    } else {
+      setDebug('no rows returned from server, using defaults');
+      setStatus('using default rows');
     }
-    rowSelect.innerHTML = '';
-    rows.forEach(r=>{
-      const o = document.createElement('option'); o.value = r; o.textContent = r.toUpperCase();
-      rowSelect.appendChild(o);
-    });
     currentRow = rowSelect.value;
-    setStatus('rows loaded');
   } catch(e){
-    console.error(e); setStatus('failed loading rows');
+    console.warn('populateDropdown failed', e);
+    setStatus('failed to load rows from server — using defaults');
+    setDebug('populateDropdown error: ' + e.message);
   }
 }
 
 /* load items for a specific row */
 async function loadItemsForRow(row){
+  clearError();
   setStatus('loading items for ' + row);
   try{
     const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(row)}`;
@@ -184,7 +211,9 @@ async function loadItemsForRow(row){
     renderItems();
     setStatus('loaded');
   } catch(e){
-    console.error(e); setStatus('failed to load items');
+    console.error(e);
+    setError('Could not load items: ' + e.message);
+    setStatus('load failed');
   }
 }
 
@@ -208,7 +237,7 @@ function renderItems(){
     const amountTd = document.createElement('td');
     const amountWrap = document.createElement('div'); amountWrap.className='amount-controls';
     const minus = document.createElement('button'); minus.textContent='-'; minus.className='small-btn';
-    const num = document.createElement('span'); num.textContent = (it.amount || 1);
+    const num = document.createElement('span'); num.style.minWidth='26px'; num.style.display='inline-block'; num.style.textAlign='center'; num.textContent = (it.amount || 1);
     const plus = document.createElement('button'); plus.textContent='+'; plus.className='small-btn';
     minus.onclick = ()=>{ adjustAmount(idx, -1); };
     plus.onclick = ()=>{ adjustAmount(idx, +1); };
@@ -245,19 +274,19 @@ function scheduleSave(){
 /* save currentItems to supabase (PATCH) */
 async function saveItemsToCloud(){
   if(!currentRow) return;
-  if(saving) return; // optionally ignore concurrent
+  if(saving) return;
   saving = true;
   setStatus('saving...');
   try{
     const url = `${SUPABASE_URL}/rest/v1/lists?row=eq.${encodeURIComponent(currentRow)}`;
     const body = { items: currentItems };
-    // prefer return representation to get updated row
     const h = Object.assign({}, headers, { 'Prefer': 'return=representation' });
     const res = await fetch(url, { method:'PATCH', headers:h, body: JSON.stringify(body) });
     if(!res.ok){ throw new Error('save failed ' + res.status); }
     setStatus('saved');
   } catch(e){
     console.error(e);
+    setError('Save failed: ' + e.message);
     setStatus('save failed');
   } finally {
     saving = false;
@@ -288,7 +317,7 @@ function removeSelected(){
   const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]'));
   const idxs = checks.filter(c=>c.checked).map(c=>Number(c.dataset.idx)).sort((a,b)=>b-a);
   if(idxs.length === 0) return alert('No items selected');
-  lastRemoved = idxs.map(i => currentItems[i]); // store removed
+  lastRemoved = idxs.map(i => currentItems[i]);
   for(const i of idxs){ currentItems.splice(i,1); }
   renderItems();
   scheduleSave();
@@ -322,35 +351,30 @@ async function onRowChange(){
   await loadItemsForRow(currentRow);
 }
 
-/* init: populate rows, select first, load items */
+/* init: fill defaults, populate, set events */
 async function init(){
   setStatus('initializing...');
-  await populateDropdown();
+  fillDefaultRows();             // immediate fallback so select is clickable
+  await populateDropdown();      // try to replace with server rows
   rowSelect.addEventListener('change', onRowChange);
   addBtn.addEventListener('click', addItemFromForm);
   removeSelectedBtn.addEventListener('click', removeSelected);
   undoRemoveBtn.addEventListener('click', undoRemove);
   exportCsvBtn.addEventListener('click', exportCsv);
 
-  // set default date to today
   itemDate.value = new Date().toISOString().slice(0,10);
-
-  // load initial row items
   currentRow = rowSelect.value;
+  await ensureRows();            // make sure server has row1..row20
   await loadItemsForRow(currentRow);
 
-  // optional: poll for remote changes every 6s — simple
   setInterval(async () => {
-    // quick check: re-load remote items and update UI if different
     try{
       const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(currentRow)}`;
       const res = await fetch(url, { headers });
       if(!res.ok) return;
       const arr = await res.json();
       const remoteItems = (arr[0] && arr[0].items) ? arr[0].items : [];
-      // naive compare length+ids
-      const same = JSON.stringify(remoteItems) === JSON.stringify(currentItems);
-      if(!same){
+      if(JSON.stringify(remoteItems) !== JSON.stringify(currentItems)){
         currentItems = remoteItems;
         renderItems();
         setStatus('List updated from cloud (remote changes).');
@@ -361,8 +385,7 @@ async function init(){
   setStatus('ready');
 }
 
-/* run init */
-init().catch(e=>{ console.error(e); setStatus('init failed'); });
+init().catch(e=>{ console.error(e); setError('Init failed: '+ e.message); setStatus('init failed'); });
 
 </script>
 </body>
