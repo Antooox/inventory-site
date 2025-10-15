@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#f6f7f9; --card:#fff; --accent:#0f9a83; --accent-2:#0b7a66; --danger:#e15757; --muted:#707b8a;
+      --bg:#f6f7f9; --card:#fff; --accent:#0f9a83; --danger:#e15757; --muted:#707b8a;
       --shadow: 0 6px 18px rgba(14,30,37,0.08);
     }
     html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
@@ -22,7 +22,7 @@
       border:1px solid #e6edf1;border-radius:8px;padding:10px 12px;font-size:15px;background:#fff;outline:none;
       box-sizing:border-box;
     }
-    select{height:44px;}
+    select{height:44px;min-width:150px;}
     .controls{display:flex;gap:12px;align-items:center;margin-top:8px;}
     .btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;}
     .btn.ghost{background:transparent;color:var(--accent);border:1px solid #d6e7e2;}
@@ -31,15 +31,13 @@
     .table th, .table td{padding:12px 8px;border-bottom:1px solid #eef2f4;text-align:left;vertical-align:middle;}
     .table th{font-weight:700;color:#333;}
     .amountBox{display:flex;align-items:center;gap:8px}
-    .smallBtn{border:1px solid #d6e6e4;background:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1}
+    .smallBtn{border:1px solid #d6e6e4;background:#fff;padding:6px 8px;border-radius:6px;cursor:pointer; min-width:34px; text-align:center;}
     .smallBtn:active{transform:translateY(1px)}
     .checkbox{width:18px;height:18px}
     .muted{color:var(--muted);font-size:13px}
     .footerRow{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
     .hidden{display:none !important}
-    /* larger +/- buttons */
-    .qty-minus, .qty-plus { width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; border-radius:8px; }
-    .qty-num{min-width:36px;text-align:center;display:inline-block}
+    /* responsive */
     @media (max-width:640px){
       .row{flex-direction:column;align-items:stretch}
       .controls{flex-direction:column;align-items:stretch}
@@ -59,7 +57,7 @@
       <div class="row" style="margin-top:14px">
         <div style="flex:1">
           <label for="rowSelect">Select row</label>
-          <select id="rowSelect"></select>
+          <select id="rowSelect" aria-label="Select warehouse row"></select>
         </div>
       </div>
 
@@ -89,9 +87,9 @@
       <table class="table" id="itemsTable" aria-live="polite">
         <thead>
           <tr>
-            <th style="width:36px"><input id="selectAll" type="checkbox" class="checkbox" /></th>
+            <th style="width:36px"></th>
             <th>Object</th>
-            <th style="width:160px">Amount</th>
+            <th style="width:140px">Amount</th>
             <th style="width:120px">Added date</th>
             <th style="width:160px">Added at</th>
           </tr>
@@ -119,7 +117,7 @@
     // ------------ CONFIG (embedded keys as requested) -------------
     const SUPABASE_URL = "https://xlgjmznrifbshgcrzjyi.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY";
-    // --------------------------------------------------------------
+    // ---------------------------------------------------------------
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -134,97 +132,82 @@
     const removeBtn = document.getElementById('removeBtn');
     const undoBtn = document.getElementById('undoBtn');
     const exportBtn = document.getElementById('exportBtn');
-    const selectAll = document.getElementById('selectAll');
 
-    let currentRow = null;
-    let currentItems = []; // array of {id, object, amount, added_date, added_at}
+    // local constants & state
+    const ROW_COUNT = 20;
+    const ROWS = Array.from({length: ROW_COUNT}, (_,i) => `ROW${i+1}`); // ROW1..ROW20
+    let currentRow = ROWS[0];
+    let currentItems = []; // array of items
     let undoStack = [];
+    let pollInterval = null;
+
+    function setStatus(t){ statusText.textContent = `Status: ${t}`; }
 
     function uuid(){
       return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,9);
     }
 
-    function setStatus(t){
-      statusText.textContent = 'Status: ' + t;
-    }
-
-    // fetch rows (distinct), create defaults with upsert if none
-    async function fetchRows(){
-      setStatus('Loading rows…');
-      const { data, error } = await supabase
-        .from('lists')
-        .select('row');
-
-      if(error){
-        console.error('fetchRows error', error);
-        setStatus('Error loading rows');
-        return;
-      }
-      // dedupe
-      const rows = Array.from(new Set((data||[]).map(r => r.row).filter(Boolean)));
-
-      if(rows.length === 0){
-        // create default rows ROW1..ROW20 using upsert so it won't fail if some exist
-        const defaultRows = Array.from({length:20}, (_,i) => ({ row: `ROW${i+1}` }));
-        const up = await supabase.from('lists').upsert(defaultRows, { onConflict: 'row' }).select();
-        if(up.error){
-          console.error('Upsert default rows failed', up.error);
-        }
-        // recall
-        return fetchRows();
-      }
-
+    // fill the row dropdown locally (no server call)
+    function populateRowSelect(){
       rowSelect.innerHTML = '';
-      rows.forEach(r => {
+      ROWS.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r; opt.textContent = r;
         rowSelect.appendChild(opt);
       });
-
-      // choose current row if already set, else first
-      if(!currentRow){
-        currentRow = rowSelect.options[0].value;
-      } else {
-        if(![...rowSelect.options].some(o => o.value === currentRow)) {
-          currentRow = rowSelect.options[0].value;
-        }
-      }
       rowSelect.value = currentRow;
-      setStatus('Rows loaded');
-      await fetchItemsForCurrentRow();
     }
 
-    // fetch items for currently selected row (maybeSingle avoids error if missing)
+    async function ensureRowExistsOnServer(row){
+      // we attempt upsert/create a row with empty items if not exists
+      try {
+        await supabase
+          .from('lists')
+          .upsert([{ row: row, items: [] }], { onConflict: 'row' });
+        return true;
+      } catch(err){
+        console.error('ensureRowExists', err);
+        return false;
+      }
+    }
+
     async function fetchItemsForCurrentRow(){
       if(!currentRow) return;
-      setStatus('Loading items…');
-      const { data, error } = await supabase
-        .from('lists')
-        .select('items')
-        .eq('row', currentRow)
-        .maybeSingle();
+      setStatus('Loading list...');
+      try {
+        const { data, error } = await supabase
+          .from('lists')
+          .select('items')
+          .eq('row', currentRow)
+          .maybeSingle();
 
-      if(error){
-        console.error('fetchItems error', error);
-        setStatus('Error loading items');
-        return;
-      }
-
-      if(!data){
-        // create empty record for this row via upsert
-        const { error: insErr } = await supabase.from('lists').upsert({ row: currentRow, items: [] }, { onConflict: 'row' });
-        if(insErr){
-          console.error('create row record failed', insErr);
-          setStatus('Error creating row');
+        if(error){
+          console.error('fetchItems error', error);
+          // try create the row empty then refetch
+          await ensureRowExistsOnServer(currentRow);
+          const second = await supabase.from('lists').select('items').eq('row', currentRow).maybeSingle();
+          currentItems = (second.data && second.data.items) ? second.data.items : [];
+          renderItems();
+          setStatus('Loaded (created missing row).');
           return;
         }
-        // recall
-        return fetchItemsForCurrentRow();
-      }
 
-      currentItems = data.items || [];
-      renderItems();
-      setStatus('List loaded');
+        if(!data){
+          // not found -> create
+          await ensureRowExistsOnServer(currentRow);
+          currentItems = [];
+          renderItems();
+          setStatus('Loaded (created new row).');
+          return;
+        }
+
+        currentItems = data.items || [];
+        renderItems();
+        setStatus('List updated from cloud (remote changes).');
+      } catch(e){
+        console.error(e);
+        setStatus('Error loading list');
+      }
     }
 
     function renderItems(){
@@ -255,18 +238,20 @@
         const wrapper = document.createElement('div');
         wrapper.className = 'amountBox';
         const minus = document.createElement('button');
-        minus.className = 'qty-minus';
-        minus.textContent = '−';
+        minus.className = 'smallBtn';
+        minus.textContent = '-';
         minus.title = 'Decrease';
-        minus.addEventListener('click', () => changeAmount(item.id, -1));
+        minus.addEventListener('click', (ev) => { ev.preventDefault(); changeAmount(item.id, -1); });
         const amt = document.createElement('span');
-        amt.className = 'qty-num';
+        amt.style.minWidth = '28px';
+        amt.style.display = 'inline-block';
+        amt.style.textAlign = 'center';
         amt.textContent = item.amount;
         const plus = document.createElement('button');
-        plus.className = 'qty-plus';
+        plus.className = 'smallBtn';
         plus.textContent = '+';
         plus.title = 'Increase';
-        plus.addEventListener('click', () => changeAmount(item.id, +1));
+        plus.addEventListener('click', (ev) => { ev.preventDefault(); changeAmount(item.id, +1); });
         wrapper.appendChild(minus);
         wrapper.appendChild(amt);
         wrapper.appendChild(plus);
@@ -287,22 +272,28 @@
       });
     }
 
-    async function saveItemsToServer(newItems, showStatus = true){
+    async function saveItemsToServer(newItems, showStatus=true){
       if(!currentRow) return false;
       if(showStatus) setStatus('Saving...');
-      const { data, error } = await supabase
-        .from('lists')
-        .update({ items: newItems })
-        .eq('row', currentRow);
+      try {
+        // upsert by row (create or update)
+        const { error } = await supabase
+          .from('lists')
+          .upsert([{ row: currentRow, items: newItems }], { onConflict: 'row' });
 
-      if(error){
-        console.error('save error', error);
+        if(error){
+          console.error('save error', error);
+          setStatus('Save failed');
+          return false;
+        }
+        currentItems = newItems;
+        if(showStatus) setStatus('Saved');
+        return true;
+      } catch(err){
+        console.error(err);
         setStatus('Save failed');
         return false;
       }
-      if(showStatus) setStatus('Saved');
-      currentItems = newItems;
-      return true;
     }
 
     async function addItem(){
@@ -323,6 +314,7 @@
       const newItems = [...currentItems, item];
       const ok = await saveItemsToServer(newItems);
       if(ok){
+        // clear inputs
         objInput.value = '';
         amountInput.value = '1';
         undoStack.push({action:'add', item});
@@ -337,7 +329,7 @@
       let newAmount = old + delta;
       if(newAmount < 0) newAmount = 0;
       currentItems[idx].amount = newAmount;
-      const ok = await saveItemsToServer([...currentItems]);
+      const ok = await saveItemsToServer([...currentItems], true);
       if(ok){
         undoStack.push({action:'change', id, from: old, to: newAmount});
         renderItems();
@@ -393,61 +385,35 @@
       a.remove(); URL.revokeObjectURL(url);
     }
 
-    // select-all checkbox
-    selectAll.addEventListener('change', () => {
-      const checks = itemsTbody.querySelectorAll('input[type="checkbox"]');
-      checks.forEach(cb => cb.checked = selectAll.checked);
-    });
+    function startPolling(){
+      if(pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
+        fetchItemsForCurrentRow().catch(()=>{});
+      }, 4000);
+    }
 
     // event listeners
     addBtn.addEventListener('click', addItem);
     rowSelect.addEventListener('change', async (e) => {
       currentRow = e.target.value;
+      await ensureRowExistsOnServer(currentRow);
       await fetchItemsForCurrentRow();
     });
     removeBtn.addEventListener('click', removeSelected);
     undoBtn.addEventListener('click', undoLast);
     exportBtn.addEventListener('click', exportCSV);
 
-    // polling to pick up remote changes (simple)
-    let pollInterval = null;
-    function startPolling(){
-      if(pollInterval) clearInterval(pollInterval);
-      pollInterval = setInterval(async () => {
-        try{
-          // fetch server record items and diff
-          if(!currentRow) return;
-          const { data, error } = await supabase
-            .from('lists')
-            .select('items')
-            .eq('row', currentRow)
-            .maybeSingle();
-          if(error){ console.warn('poll fetch error', error); return; }
-          const serverItems = (data && data.items) ? JSON.stringify(data.items) : '[]';
-          const localItemsStr = JSON.stringify(currentItems || []);
-          if(serverItems !== localItemsStr){
-            // update local
-            currentItems = (data && data.items) ? data.items : [];
-            renderItems();
-            setStatus('List updated from cloud (remote changes).');
-          }
-        }catch(err){
-          console.error('poll error', err);
-        }
-      }, 3000);
-    }
-
     // init
     (async function init(){
       dateInput.value = new Date().toISOString().slice(0,10);
       setStatus('Initializing…');
-      await fetchRows();
+      populateRowSelect();
+      // ensure default row exists on server and fetch its items
+      await ensureRowExistsOnServer(currentRow);
+      await fetchItemsForCurrentRow();
       startPolling();
       setStatus('Ready');
     })();
-
-    // expose for debugging (optional)
-    window._debug = { fetchRows, fetchItemsForCurrentRow, saveItemsToServer };
   </script>
 </body>
 </html>
