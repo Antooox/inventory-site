@@ -1,231 +1,362 @@
 <!doctype html>
 <html lang="sv">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Inventory — Simple (prod)</title>
-<style>
-  :root{--bg:#f6f7f9;--card:#fff;--muted:#64748b;--accent:#0ea5a4}
-  html,body{height:100%;margin:0;background:var(--bg);font-family:Inter,Arial,Helvetica,sans-serif;color:#0b1220}
-  .wrap{max-width:980px;margin:28px auto;padding:18px}
-  .card{background:var(--card);padding:18px;border-radius:10px;box-shadow:0 10px 30px rgba(10,20,40,0.06)}
-  h1{margin:0 0 6px;font-size:20px}
-  .lead{margin:0 0 12px;color:var(--muted);font-size:14px}
-  .formgrid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-  .formgrid > *{flex:1 1 160px;min-width:140px}
-  input[type="text"], input[type="date"]{
-    width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #dfe8ef;background:#fff;color:#0b1220;font-size:14px
-  }
-  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  button{padding:10px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
-  .btn-primary{background:var(--accent);color:#fff}
-  .btn-ghost{background:#eef2f7;color:#0b1220;border:1px solid #e6eef6}
-  .btn-danger{background:#ef4444;color:#fff}
-  .btn-small{padding:6px 8px;font-size:13px;border-radius:6px}
-  table{width:100%;border-collapse:collapse;margin-top:12px}
-  th,td{padding:10px 8px;border-bottom:1px solid #f0f4f8;text-align:left;font-size:14px}
-  thead th{font-size:13px;color:var(--muted)}
-  tr.selected{background:rgba(14,165,164,0.06)}
-  .small{font-size:13px;color:var(--muted)}
-  .toolbar{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
-  @media (max-width:640px){ .formgrid{flex-direction:column} .toolbar{flex-direction:column;align-items:stretch} }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple inventory</title>
+  <style>
+    /* --- Basstyles --- */
+    :root{
+      --card-bg: #fff;
+      --muted: #6b7280;
+      --accent: #0ea5a4;
+      --danger: #ef4444;
+      --gap: 12px;
+      --radius: 10px;
+    }
+    body{
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background:#f3f4f6;
+      margin:0;
+      color:#111827;
+      -webkit-font-smoothing:antialiased;
+    }
+    .container{
+      max-width:1000px;
+      margin:36px auto;
+      padding:20px;
+    }
+
+    /* Card */
+    .card{
+      background:var(--card-bg);
+      border-radius:var(--radius);
+      padding:22px;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.06);
+    }
+    h1{ margin:0 0 6px 0; font-size:28px; }
+    p.lead{ color:var(--muted); margin:6px 0 18px 0; }
+
+    /* Top info */
+    #rowInfo{ font-size:14px; color:var(--muted); margin-bottom:10px; }
+
+    /* Form layout (tight) */
+    .form-top, .form-row, .controls {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin:0 0 8px 0;
+    }
+    .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+    label{ font-size:14px; color:#334155; }
+    input[type="text"], input[type="date"]{
+      padding:10px 12px;
+      height:44px;
+      border-radius:8px;
+      border:1px solid #e6e9ee;
+      box-sizing:border-box;
+      font-size:15px;
+    }
+    .btn{
+      border:0;
+      border-radius:10px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .btn-add{ background:var(--accent); color:#fff; }
+    .btn-remove{ background:var(--danger); color:#fff; }
+    .btn-ghost{ background:#f1f5f9; color:#0f1720; }
+    .btn-undo{ background:#e6eef2; color:#0b5562; }
+
+    /* Table */
+    table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
+    thead th{ text-align:left; padding:12px 8px; color:#64748b; font-weight:700; border-bottom:1px solid #eef2f7; }
+    tbody td{ padding:12px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .checkbox{ width:18px; height:18px; }
+
+    /* Buttons row */
+    .actions{ display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; }
+    .small { padding:8px 10px; font-size:14px; }
+
+    /* responsive */
+    @media (max-width:640px){
+      .form-top, .form-row, .controls { flex-direction:column; align-items:stretch; gap:8px; }
+      .btn-add{ align-self:flex-end; }
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card" role="region" aria-label="Simple inventory">
-      <h1>Simple inventory</h1>
-      <p class="lead">Lägg till objekt, markera för att ta bort och exportera som CSV vid behov. Data sparas lokalt i din webbläsare.</p>
+  <div class="container">
+    <h1>Simple inventory</h1>
+    <p class="lead">Lägg till objekt, markera för att ta bort och exportera som CSV vid behov. Data sparas lokalt i din webbläsare.</p>
 
-      <div class="formgrid" role="form" aria-label="Add object form">
-        <div>
-          <label for="objInput" class="small">Object</label>
-          <input id="objInput" type="text" placeholder="Ex: Ventil ABC-123" aria-label="Object">
-        </div>
-        <div>
-          <label for="dateInput" class="small">Added date</label>
-          <input id="dateInput" type="date" aria-label="Added date">
+    <div class="card" id="inventory-root">
+      <div id="rowInfo"></div>
+
+      <div class="form-top">
+        <div class="field" style="flex:1;min-width:180px">
+          <label for="objectInput">Object</label>
+          <input id="objectInput" type="text" placeholder="Ex: Ventil ABC-123" />
         </div>
 
-        <div style="display:flex;flex-direction:column;justify-content:flex-end">
-          <div class="controls" style="justify-content:flex-end;">
-            <button id="addBtn" class="btn-primary" type="button">Add to list</button>
-          </div>
+        <div class="field">
+          <label for="dateInput">Added date</label>
+          <input id="dateInput" type="date" />
+        </div>
+
+        <div style="margin-left:auto">
+          <button id="addBtn" class="btn btn-add">Add to list</button>
         </div>
       </div>
 
-      <table role="table" aria-live="polite" aria-label="Items table">
-        <thead>
-          <tr>
-            <th style="width:36px"><input id="selectAll" type="checkbox" aria-label="Select all rows" /></th>
-            <th>Object</th>
-            <th>Added date</th>
-            <th style="width:160px">Added at</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="4" class="small">Inga poster ännu</td></tr>
-        </tbody>
-      </table>
-
-      <div class="toolbar" role="toolbar" aria-label="Actions">
-        <button id="removeBtn" class="btn-danger btn-small" type="button">Remove selected</button>
-        <button id="undoBtn" class="btn-ghost btn-small" type="button">Undo remove</button>
-        <button id="exportBtn" class="btn-ghost btn-small" type="button">Export CSV</button>
+      <div class="table-container">
+        <table id="itemsTable" aria-describedby="tableDesc">
+          <thead>
+            <tr>
+              <th style="width:36px"><input id="selectAll" type="checkbox" class="checkbox" /></th>
+              <th>Object</th>
+              <th>Added date</th>
+              <th>Added at</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="4" style="color:#94a3b8;padding:18px;">Inga poster ännu</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      <p class="small" style="margin-top:12px">Tips: om du vill dela listan mellan kollegor, nästa steg är att lägga upp filen på en HTTPS-host och ev. lägga till en liten serverless-endpoint.</p>
+      <div class="actions">
+        <button id="removeBtn" class="btn btn-remove small">Remove selected</button>
+        <button id="undoBtn" class="btn btn-undo small">Undo remove</button>
+        <button id="exportBtn" class="btn btn-ghost small">Export CSV</button>
+      </div>
+
+      <p id="tableDesc" style="color:var(--muted); margin-top:12px;">Tips: om du vill dela listan mellan kollegor, nästa steg är att lägga upp filen på en HTTPS-host och ev. lägga till en liten serverless-endpoint.</p>
     </div>
   </div>
 
-<script>
-(function(){
-  const KEY = 'simple_inventory_prod_v1';
-  const objInput = document.getElementById('objInput');
-  const dateInput = document.getElementById('dateInput');
-  const addBtn = document.getElementById('addBtn');
-  const removeBtn = document.getElementById('removeBtn');
-  const undoBtn = document.getElementById('undoBtn');
-  const exportBtn = document.getElementById('exportBtn');
-  const tbody = document.getElementById('tbody');
-  const selectAll = document.getElementById('selectAll');
+  <script>
+    // --- State & DOM ---
+    const objectInput = document.getElementById('objectInput');
+    const dateInput = document.getElementById('dateInput');
+    const addBtn = document.getElementById('addBtn');
+    const tbody = document.getElementById('tbody');
+    const removeBtn = document.getElementById('removeBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const selectAll = document.getElementById('selectAll');
+    const rowInfo = document.getElementById('rowInfo');
 
-  let items = [];
-  let lastRemoved = []; // store removed items for undo
+    let items = [];               // { id, object, addedDate, addedAt }
+    let lastRemoved = [];         // for undo
+    const STORAGE_KEY = 'inventory_items_v1';
+    const STORAGE_ROW_KEY = 'inventory_current_row';
 
-  // init date to today
-  function setToday(){
-    const d = new Date();
-    dateInput.value = d.toISOString().slice(0,10);
-  }
+    // initialize date input to today
+    (function setDefaultDate(){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    })();
 
-  function load(){
-    try{ items = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ items = []; }
-    render();
-  }
+    // --- Helpers ---
+    function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-  function save(){
-    localStorage.setItem(KEY, JSON.stringify(items));
-  }
-
-  function render(){
-    tbody.innerHTML = '';
-    if(items.length === 0){
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="4" class="small">Inga poster ännu</td>';
-      tbody.appendChild(tr);
-      selectAll.checked = false;
-      selectAll.indeterminate = false;
-      return;
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     }
-    items.forEach((it, idx) => {
-      const tr = document.createElement('tr');
-      if(it.selected) tr.classList.add('selected');
-      tr.innerHTML = `
-        <td><input type="checkbox" class="row-check" data-index="${idx}" ${it.selected ? 'checked' : ''} aria-label="Select row ${idx+1}" /></td>
-        <td>${escapeHtml(it.object)}</td>
-        <td>${escapeHtml(it.addedDate)}</td>
-        <td style="color:#64748b;font-size:13px">${escapeHtml(it.addedAt)}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-    updateSelectAllCheckbox();
-  }
+    function load(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      items = raw ? JSON.parse(raw) : [];
+    }
 
-  function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function render(){
+      tbody.innerHTML = '';
+      if(!items.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4" style="color:#94a3b8;padding:18px;">Inga poster ännu</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = item.id;
+        tr.innerHTML = `
+          <td><input class="row-check checkbox" type="checkbox" data-id="${item.id}"></td>
+          <td>${escapeHtml(item.object)}</td>
+          <td>${escapeHtml(item.addedDate)}</td>
+          <td>${escapeHtml(item.addedAt)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-  // Add
-  addBtn.addEventListener('click', () => {
-    const obj = objInput.value.trim();
-    const addedDate = dateInput.value || '';
-    if(!obj){ alert('Fyll i Object'); objInput.focus(); return; }
-    const item = {
-      id: 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
-      object: obj,
-      addedDate: addedDate,
-      addedAt: new Date().toLocaleString(),
-      selected: false
+    function escapeHtml(s){
+      return String(s || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    }
+
+    // add item from UI or programmatically
+    function addItem(obj, addedDate){
+      if(!obj || !obj.trim()) return;
+      const now = new Date();
+      const item = {
+        id: uid(),
+        object: obj.trim(),
+        addedDate: addedDate || dateInput.value || '',
+        addedAt: now.toLocaleString()
+      };
+      items.unshift(item); // newest first
+      save();
+      render();
+      // inform parent
+      postToParent('itemAdded', { item });
+    }
+
+    // programmatic API accessible globally
+    window.addItemFromCode = function(payload){
+      // payload: {object, addedDate}
+      addItem(payload.object || payload.name || 'item', payload.addedDate || payload.date);
     };
-    items.push(item);
-    save();
+
+    // remove selected rows
+    function removeSelected(){
+      const checks = Array.from(document.querySelectorAll('.row-check:checked'));
+      if(!checks.length) return;
+      const ids = checks.map(ch => ch.dataset.id);
+      lastRemoved = items.filter(it => ids.includes(it.id));
+      items = items.filter(it => !ids.includes(it.id));
+      save();
+      render();
+      postToParent('itemsRemoved', { removedIds: ids, removedItems: lastRemoved });
+      // reset select all
+      selectAll.checked = false;
+    }
+
+    function undoRemove(){
+      if(!lastRemoved.length) return;
+      // restore to top
+      items = lastRemoved.concat(items);
+      lastRemoved = [];
+      save();
+      render();
+      postToParent('undoRemove', {});
+    }
+
+    // export CSV (simple)
+    function exportCSV(){
+      if(!items.length) {
+        alert('Inga poster att exportera');
+        return;
+      }
+      const lines = [];
+      // header
+      lines.push(['Object','AddedDate','AddedAt'].join(','));
+      items.slice().reverse().forEach(it => { // export older->newer
+        // basic CSV escaping with quotes
+        const row = [
+          `"${it.object.replaceAll('"','""')}"`,
+          `"${it.addedDate}"`,
+          `"${it.addedAt}"`
+        ];
+        lines.push(row.join(','));
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'inventory.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // postMessage helper (to parent)
+    function postToParent(type, payload){
+      try{
+        window.parent.postMessage({ type, payload }, '*'); // '*' ok for now; in prod specify origin
+      }catch(e){ /* ignore */ }
+    }
+
+    // --- Event listeners ---
+    addBtn.addEventListener('click', () => {
+      addItem(objectInput.value, dateInput.value);
+      objectInput.value = '';
+      objectInput.focus();
+    });
+
+    removeBtn.addEventListener('click', removeSelected);
+    undoBtn.addEventListener('click', undoRemove);
+    exportBtn.addEventListener('click', exportCSV);
+
+    // select all checkbox
+    selectAll.addEventListener('change', (ev) => {
+      const checks = Array.from(document.querySelectorAll('.row-check'));
+      checks.forEach(c => c.checked = ev.target.checked);
+    });
+
+    // delegate: when table changes, update selectAll state
+    document.addEventListener('change', (ev) => {
+      if(ev.target && ev.target.classList && ev.target.classList.contains('row-check')){
+        const checks = Array.from(document.querySelectorAll('.row-check'));
+        const checked = checks.filter(c => c.checked).length;
+        selectAll.checked = checks.length && (checked === checks.length);
+      }
+    });
+
+    // --- postMessage listener (parent -> iframe) ---
+    const ALLOWED_ORIGINS = []; // optional: fill if you want to restrict
+    window.addEventListener('message', (ev) => {
+      // We allow all for now (since parent may be Zeet). Uncomment to restrict:
+      // if(ALLOWED_ORIGINS.length && !ALLOWED_ORIGINS.includes(ev.origin)) return;
+      const data = ev.data || {};
+      const t = data.type;
+      if(t === 'init'){
+        const row = data.payload && data.payload.row;
+        if(row){
+          localStorage.setItem(STORAGE_ROW_KEY, row);
+          showRow(row);
+        }
+      } else if(t === 'addItem'){
+        const payload = data.payload || {};
+        window.addItemFromCode(payload);
+      } else if(t === 'ping'){
+        postToParent('pong', { ts: Date.now() });
+      }
+    });
+
+    function showRow(row){
+      rowInfo.textContent = 'Row: ' + row;
+    }
+
+    // read ?row= from URL and prefill
+    (function prefillFromQuery(){
+      try{
+        const params = new URLSearchParams(location.search);
+        const row = params.get('row');
+        const saved = localStorage.getItem(STORAGE_ROW_KEY);
+        if(row){
+          localStorage.setItem(STORAGE_ROW_KEY, row);
+          showRow(row);
+        } else if(saved){
+          showRow(saved);
+        }
+      }catch(e){}
+    })();
+
+    // --- init load ---
+    load();
     render();
-    objInput.value = '';
-    setToday();
-    objInput.focus();
-  });
 
-  // Remove selected
-  removeBtn.addEventListener('click', () => {
-    const selected = items.filter(i => i.selected);
-    if(selected.length === 0){ alert('Markera minst en rad att ta bort'); return; }
-    if(!confirm(`Ta bort ${selected.length} markerade poster?`)) return;
-    // store for undo
-    lastRemoved = selected.map(i => Object.assign({}, i));
-    items = items.filter(i => !i.selected);
-    save(); render();
-  });
-
-  // Undo remove
-  undoBtn.addEventListener('click', () => {
-    if(!lastRemoved || lastRemoved.length === 0){ alert('Inget att ångra'); return; }
-    // put them back at end
-    items = items.concat(lastRemoved.map(i => Object.assign({}, i, { selected: false })));
-    lastRemoved = [];
-    save(); render();
-  });
-
-  // Select row checkbox toggle (event delegation)
-  tbody.addEventListener('change', (e) => {
-    const cb = e.target.closest('.row-check');
-    if(!cb) return;
-    const idx = Number(cb.dataset.index);
-    items[idx].selected = !!cb.checked;
-    save(); render();
-  });
-
-  // select all
-  selectAll.addEventListener('change', () => {
-    const v = !!selectAll.checked;
-    items = items.map(i => Object.assign({}, i, { selected: v }));
-    save(); render();
-  });
-
-  function updateSelectAllCheckbox(){
-    if(items.length === 0){ selectAll.checked = false; selectAll.indeterminate = false; return; }
-    const checkedCount = items.filter(i => i.selected).length;
-    selectAll.checked = checkedCount === items.length;
-    selectAll.indeterminate = checkedCount > 0 && checkedCount < items.length;
-  }
-
-  // Export CSV (exports current visible items)
-  exportBtn.addEventListener('click', () => {
-    if(items.length === 0){ alert('Inga poster att exportera'); return; }
-    const hdr = ['Object','AddedDate','AddedAt'];
-    const rows = items.map(it => [it.object, it.addedDate, it.addedAt].map(cell => '"' + String(cell||'').replace(/"/g,'""') + '"').join(','));
-    const csv = [hdr.join(',')].concat(rows).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'inventory_export.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  });
-
-  // Keyboard: Enter in text field triggers Add
-  objInput.addEventListener('keydown', (e) => {
-    if(e.key === 'Enter'){ e.preventDefault(); addBtn.click(); }
-  });
-
-  // initial
-  setToday();
-  load();
-
-  // expose for debug
-  window.__simpleInventoryProd = { getItems: () => items, clear: () => { items=[]; save(); render(); } };
-})();
-</script>
+    // expose a quick debug show
+    window.__inventory = {
+      addItemFromCode: window.addItemFromCode,
+      items: () => items.slice()
+    };
+  </script>
 </body>
 </html>
