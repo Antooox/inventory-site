@@ -3,139 +3,103 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple inventory (Supabase)</title>
+  <title>Simple inventory (Supabase autosave)</title>
   <style>
     :root{
       --card-bg: #fff;
       --muted: #6b7280;
-      --accent: #0ea5a4;
+      --accent: #14b8a6;
+      --accent-dark: #0f766e;
       --danger: #ef4444;
-      --gap: 12px;
       --radius: 10px;
+      --gap: 12px;
     }
     body{
-      font-family: Inter, system-ui, Arial, sans-serif;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
       background:#f3f4f6;
       margin:0;
       color:#111827;
       -webkit-font-smoothing:antialiased;
     }
-    .container{
-      max-width:1000px;
-      margin:36px auto;
-      padding:20px;
-    }
-    .card{
-      background:var(--card-bg);
-      border-radius:var(--radius);
-      padding:22px;
-      box-shadow: 0 6px 20px rgba(15,23,42,0.06);
-    }
-    h1{ margin:0 0 6px 0; font-size:28px; }
-    p.lead{ color:var(--muted); margin:6px 0 18px 0; }
-    #rowInfo{ font-size:14px; color:var(--muted); margin-bottom:10px; }
+    .wrap{ max-width:1000px; margin:36px auto; padding:18px; }
+    .card{ background:var(--card-bg); padding:22px; border-radius:var(--radius); box-shadow:0 8px 30px rgba(2,6,23,0.06); }
+    h1{ margin:0 0 6px 0; font-size:26px; }
+    p.lead{ color:var(--muted); margin:6px 0 16px 0; }
 
-    .form-top, .form-row, .controls {
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-      margin:0 0 8px 0;
-    }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
     .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
-    label{ font-size:14px; color:#334155; }
+    label { font-size:13px; color:#374151; }
     input[type="text"], input[type="date"], input[type="number"]{
-      padding:10px 12px;
-      height:44px;
-      border-radius:8px;
-      border:1px solid #e6e9ee;
-      box-sizing:border-box;
-      font-size:15px;
+      padding:10px 12px; height:44px; border-radius:8px; border:1px solid #e6eef2; font-size:15px;
+      background:white;
     }
-    input[type="number"] { width:110px; }
+    input[type="number"]{ width:110px; }
 
-    .btn{
-      border:0;
-      border-radius:10px;
-      padding:10px 14px;
-      cursor:pointer;
-      font-weight:600;
-    }
-    .btn-add{ background:var(--accent); color:#fff; }
-    .btn-remove{ background:var(--danger); color:#fff; }
-    .btn-ghost{ background:#f1f5f9; color:#0f1720; }
-    .btn-undo{ background:#e6eef2; color:#0b5562; }
+    .btn { border:0; border-radius:10px; padding:9px 14px; cursor:pointer; font-weight:700; }
+    .btn-primary { background:var(--accent); color:white; }
+    .btn-primary:active { background:var(--accent-dark); }
+    .btn-danger { background:var(--danger); color:white; }
+    .btn-ghost { background:#f1f5f9; color:#0f1720; border:1px solid #e6eef2; }
+    .btn-undo { background:#eef2f6; color:#0b5562; border:1px solid #d1e6ea; }
 
     table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
     thead th{ text-align:left; padding:12px 8px; color:#64748b; font-weight:700; border-bottom:1px solid #eef2f7; }
-    tbody td{ padding:12px 8px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    tbody td{ padding:12px 8px; border-bottom:1px solid #f3f6f9; vertical-align:middle; }
     .checkbox{ width:18px; height:18px; }
 
     .amount-controls { display:flex; gap:6px; align-items:center; }
-    .amt-btn {
-      background:#eef2f6;
-      border:1px solid #d1e6ea;
-      border-radius:6px;
-      padding:6px 8px;
-      cursor:pointer;
-      font-weight:700;
-    }
-    .amt-value { min-width:36px; text-align:center; padding:6px 4px; display:inline-block; }
+    .amt-btn { background:#ffffff; border:1px solid #e6eef2; padding:6px 8px; border-radius:6px; cursor:pointer; font-weight:700; }
+    .amt-value { min-width:36px; text-align:center; display:inline-block; }
 
-    .actions{ display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; align-items:center; }
-    .small { padding:8px 10px; font-size:14px; }
+    .actions { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+    .status { color:#374151; font-size:13px; }
 
-    #shareLink { padding:8px; border-radius:8px; border:1px solid #e6e9ee; min-width:260px; }
-    #copyShare { padding:8px 10px; border-radius:8px; border:0; background:#2563eb; color:white; cursor:pointer; }
+    #shareLink { padding:8px; border-radius:8px; border:1px solid #e6eef2; min-width:260px; background:white; }
+    #copyShare { padding:8px 10px; border-radius:8px; background:#2563eb; color:white; border:0; cursor:pointer; }
 
-    @media (max-width:640px){
-      .form-top, .form-row, .controls { flex-direction:column; align-items:stretch; gap:8px; }
-      .btn-add{ align-self:flex-end; }
+    @media(max-width:640px){
+      .row { flex-direction:column; align-items:stretch; }
       input[type="number"]{ width:100%; }
-      #shareLink { width:100%; }
+      #shareLink{ width:100%; }
     }
-
-    .status { color:#334155; font-size:13px; margin-left:8px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Simple inventory</h1>
-    <p class="lead">Add items, mark to remove, and export CSV. Use "Save cloud" to create a shareable link.</p>
+  <div class="wrap">
+    <div class="card">
+      <h1>Simple inventory</h1>
+      <p class="lead">Add items, adjust amounts, remove and export CSV. The list autosaves to the cloud automatically.</p>
 
-    <div class="card" id="inventory-root">
-      <div id="rowInfo"></div>
-
-      <div class="form-top">
-        <div class="field" style="flex:1;min-width:160px">
+      <div id="controls" class="row" style="margin-bottom:8px;">
+        <div class="field" style="flex:1;min-width:160px;">
           <label for="objectInput">Object</label>
           <input id="objectInput" type="text" placeholder="Ex: Valve ABC-123" />
         </div>
 
-        <div class="field" style="width:170px">
+        <div class="field" style="width:150px;">
           <label for="dateInput">Added date</label>
           <input id="dateInput" type="date" />
         </div>
 
-        <div class="field" style="width:130px">
+        <div class="field" style="width:120px;">
           <label for="amountInput">Amount</label>
           <input id="amountInput" type="number" min="1" value="1" />
         </div>
 
-        <div style="margin-left:auto">
-          <button id="addBtn" class="btn btn-add">Add to list</button>
+        <div style="margin-left:auto;">
+          <button id="addBtn" class="btn btn-primary">Add to list</button>
         </div>
       </div>
 
-      <div class="table-container">
-        <table id="itemsTable" aria-describedby="tableDesc">
+      <div class="table-wrap">
+        <table aria-describedby="tableDesc">
           <thead>
             <tr>
-              <th style="width:36px"><input id="selectAll" type="checkbox" class="checkbox" /></th>
+              <th style="width:36px;"><input id="selectAll" type="checkbox" class="checkbox" /></th>
               <th>Object</th>
-              <th style="width:140px">Amount</th>
-              <th>Added date</th>
-              <th>Added at</th>
+              <th style="width:160px">Amount</th>
+              <th style="width:140px">Added date</th>
+              <th style="width:180px">Added at</th>
             </tr>
           </thead>
           <tbody id="tbody">
@@ -145,50 +109,62 @@
       </div>
 
       <div class="actions">
-        <button id="removeBtn" class="btn btn-remove small">Remove selected</button>
-        <button id="undoBtn" class="btn btn-undo small">Undo remove</button>
-        <button id="exportBtn" class="btn btn-ghost small">Export CSV</button>
+        <button id="removeBtn" class="btn btn-danger">Remove selected</button>
+        <button id="undoBtn" class="btn btn-undo">Undo remove</button>
+        <button id="exportBtn" class="btn btn-ghost">Export CSV</button>
 
-        <button id="saveCloudBtn" class="btn btn-ghost small">Save cloud</button>
-        <input id="shareLink" readonly placeholder="Share link will appear here after Save" />
-        <button id="copyShare" title="Copy link">Copy</button>
+        <div style="margin-left: auto; display:flex; gap:8px; align-items:center;">
+          <button id="saveNowBtn" class="btn btn-ghost">Save now</button>
+          <input id="shareLink" readonly placeholder="Share link will appear here" />
+          <button id="copyShare" title="Copy link">Copy</button>
+        </div>
 
-        <span id="saveStatus" class="status"></span>
+        <div style="margin-left:8px;"><span id="saveStatus" class="status"></span></div>
       </div>
 
+      <p id="tableDesc" style="color:var(--muted); margin-top:12px;">Shareable lists are stored in Supabase.</p>
     </div>
   </div>
 
   <script>
-    // --------- SUPABASE CONFIG: replace with your values ----------
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
-    // -------------------------------------------------------------
+    /*************************************************
+     * Supabase config: (inserted per your request)
+     * NOTE: this anon key is public for client use.
+     * Protect it if this becomes production.
+     *************************************************/
+    const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
 
-    // DOM
+    /************ DOM elements ************/
     const objectInput = document.getElementById('objectInput');
     const dateInput = document.getElementById('dateInput');
     const amountInput = document.getElementById('amountInput');
     const addBtn = document.getElementById('addBtn');
+
     const tbody = document.getElementById('tbody');
+    const selectAll = document.getElementById('selectAll');
     const removeBtn = document.getElementById('removeBtn');
     const undoBtn = document.getElementById('undoBtn');
     const exportBtn = document.getElementById('exportBtn');
-    const selectAll = document.getElementById('selectAll');
-    const rowInfo = document.getElementById('rowInfo');
 
-    const saveCloudBtn = document.getElementById('saveCloudBtn');
+    const saveNowBtn = document.getElementById('saveNowBtn');
     const shareLinkInput = document.getElementById('shareLink');
     const copyShareBtn = document.getElementById('copyShare');
     const saveStatus = document.getElementById('saveStatus');
 
-    // state
-    let items = [];               // { id, object, amount, addedDate, addedAt }
+    /************ State & storage keys ************/
+    let items = []; // { id, object, amount, addedDate, addedAt }
     let lastRemoved = [];
     const STORAGE_KEY = 'inventory_items_v1';
+    const CLOUD_ID_KEY = 'inventory_cloud_id';
     const STORAGE_ROW_KEY = 'inventory_current_row';
 
-    ;(function setDefaultDate(){
+    /************ utility ************/
+    function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+    function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+    /************ default date ************/
+    (function setDefaultDate(){
       const d = new Date();
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -196,10 +172,11 @@
       dateInput.value = `${yyyy}-${mm}-${dd}`;
     })();
 
-    function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
-    function load(){ const raw = localStorage.getItem(STORAGE_KEY); items = raw ? JSON.parse(raw) : []; }
+    /************ local storage helpers ************/
+    function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    function loadLocal(){ const raw = localStorage.getItem(STORAGE_KEY); items = raw ? JSON.parse(raw) : []; }
 
+    /************ render ************/
     function render(){
       tbody.innerHTML = '';
       if(!items.length){
@@ -208,87 +185,79 @@
         tbody.appendChild(tr);
         return;
       }
-      items.forEach(item => {
+      for(const it of items){
         const tr = document.createElement('tr');
-        tr.dataset.id = item.id;
+        tr.dataset.id = it.id;
         tr.innerHTML = `
-          <td><input class="row-check checkbox" type="checkbox" data-id="${item.id}"></td>
-          <td>${escapeHtml(item.object)}</td>
+          <td><input class="row-check checkbox" type="checkbox" data-id="${it.id}"></td>
+          <td>${escapeHtml(it.object)}</td>
           <td>
-            <div class="amount-controls" data-id="${item.id}">
-              <button class="amt-btn btn-decr" aria-label="Decrease" data-id="${item.id}">−</button>
-              <span class="amt-value" data-id="${item.id}">${item.amount}</span>
-              <button class="amt-btn btn-incr" aria-label="Increase" data-id="${item.id}">+</button>
+            <div class="amount-controls" data-id="${it.id}">
+              <button class="amt-btn btn-decr" data-id="${it.id}" aria-label="decrease">−</button>
+              <span class="amt-value" data-id="${it.id}">${it.amount}</span>
+              <button class="amt-btn btn-incr" data-id="${it.id}" aria-label="increase">+</button>
             </div>
           </td>
-          <td>${escapeHtml(item.addedDate)}</td>
-          <td>${escapeHtml(item.addedAt)}</td>
+          <td>${escapeHtml(it.addedDate)}</td>
+          <td>${escapeHtml(it.addedAt)}</td>
         `;
         tbody.appendChild(tr);
-      });
+      }
     }
 
-    function escapeHtml(s){ return String(s || '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-
-    function addItem(obj, addedDate, amount){
-      if(!obj || !obj.trim()) return;
-      amount = Number(amount) || 1;
-      if(amount < 1) amount = 1;
+    /************ modify items ************/
+    function addItem(text, dateVal, amountVal){
+      if(!text || !String(text).trim()) return;
       const now = new Date();
       const item = {
         id: uid(),
-        object: obj.trim(),
-        amount: amount,
-        addedDate: addedDate || dateInput.value || '',
+        object: String(text).trim(),
+        amount: Math.max(1, Number(amountVal) || 1),
+        addedDate: dateVal || dateInput.value || '',
         addedAt: now.toLocaleString()
       };
       items.unshift(item);
-      save();
+      saveLocal();
       render();
-      // fire a postMessage event for parent if embedded
-      try{ window.parent.postMessage({ type:'itemAdded', payload:{ item } }, '*'); }catch(e){}
+      scheduleAutoSave();
     }
-
-    window.addItemFromCode = function(payload){
-      addItem(payload.object || payload.name || 'item', payload.addedDate || payload.date, payload.amount || payload.qty || 1);
-    };
-
-    addBtn.addEventListener('click', () => {
-      addItem(objectInput.value, dateInput.value, Number(amountInput.value || 1));
-      objectInput.value = '';
-      amountInput.value = 1;
-      objectInput.focus();
-    });
 
     function removeSelected(){
       const checks = Array.from(document.querySelectorAll('.row-check:checked'));
       if(!checks.length) return;
-      const ids = checks.map(ch => ch.dataset.id);
-      lastRemoved = items.filter(it => ids.includes(it.id));
-      items = items.filter(it => !ids.includes(it.id));
-      save();
+      const ids = checks.map(c => c.dataset.id);
+      lastRemoved = items.filter(i => ids.includes(i.id));
+      items = items.filter(i => !ids.includes(i.id));
+      saveLocal();
       render();
       selectAll.checked = false;
-      try{ window.parent.postMessage({ type:'itemsRemoved', payload:{ removedIds: ids } }, '*'); }catch(e){}
+      scheduleAutoSave();
     }
 
     function undoRemove(){
       if(!lastRemoved.length) return;
       items = lastRemoved.concat(items);
       lastRemoved = [];
-      save();
+      saveLocal();
       render();
-      try{ window.parent.postMessage({ type:'undoRemove', payload: {} }, '*'); }catch(e){}
+      scheduleAutoSave();
     }
 
+    function changeAmount(id, delta){
+      const idx = items.findIndex(i=>i.id===id);
+      if(idx===-1) return;
+      items[idx].amount = Math.max(1, Number(items[idx].amount) + delta);
+      saveLocal();
+      render();
+      scheduleAutoSave();
+    }
+
+    /************ export CSV ************/
     function exportCSV(){
-      if(!items.length) {
-        alert('No items to export');
-        return;
-      }
+      if(!items.length){ alert('No items to export'); return; }
       const lines = [];
       lines.push(['Object','Amount','AddedDate','AddedAt'].join(','));
-      items.slice().reverse().forEach(it => {
+      items.slice().reverse().forEach(it=>{
         const row = [
           `"${it.object.replaceAll('"','""')}"`,
           `"${it.amount}"`,
@@ -299,178 +268,229 @@
       });
       const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'inventory.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const a = document.createElement('a'); a.href = url; a.download = 'inventory.csv';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     }
+
+    /************ event wiring ************/
+    addBtn.addEventListener('click', ()=> {
+      addItem(objectInput.value, dateInput.value, Number(amountInput.value || 1));
+      objectInput.value=''; amountInput.value=1; objectInput.focus();
+    });
 
     removeBtn.addEventListener('click', removeSelected);
     undoBtn.addEventListener('click', undoRemove);
     exportBtn.addEventListener('click', exportCSV);
 
-    selectAll.addEventListener('change', (ev) => {
+    selectAll.addEventListener('change', (e)=>{
       const checks = Array.from(document.querySelectorAll('.row-check'));
-      checks.forEach(c => c.checked = ev.target.checked);
+      checks.forEach(c=>c.checked = e.target.checked);
     });
 
-    document.addEventListener('change', (ev) => {
-      if(ev.target && ev.target.classList && ev.target.classList.contains('row-check')){
-        const checks = Array.from(document.querySelectorAll('.row-check'));
-        const checked = checks.filter(c => c.checked).length;
-        selectAll.checked = checks.length && (checked === checks.length);
+    document.addEventListener('change', (e)=>{
+      if(e.target && e.target.classList && e.target.classList.contains('row-check')){
+        const all = Array.from(document.querySelectorAll('.row-check'));
+        const checked = all.filter(c=>c.checked).length;
+        selectAll.checked = all.length && (checked === all.length);
       }
     });
 
-    document.addEventListener('click', (ev) => {
-      const t = ev.target;
-      if(t.matches('.btn-incr')){
+    document.addEventListener('click', (e)=>{
+      const t = e.target;
+      if(t.matches('.btn-incr') || t.matches('.btn-decr') || t.classList.contains('btn-incr') || t.classList.contains('btn-decr')){
         const id = t.dataset.id;
-        changeAmount(id, 1);
-      } else if(t.matches('.btn-decr')){
-        const id = t.dataset.id;
-        changeAmount(id, -1);
+        changeAmount(id, t.matches('.btn-incr') || t.classList.contains('btn-incr') ? 1 : -1);
       }
     });
 
-    function changeAmount(id, delta){
-      const idx = items.findIndex(it => it.id === id);
-      if(idx === -1) return;
-      items[idx].amount = Math.max(1, Number(items[idx].amount) + delta);
-      save();
-      render();
-      try{ window.parent.postMessage({ type:'amountChanged', payload:{ id, amount: items[idx].amount } }, '*'); }catch(e){}
-    }
+    /************ Autosave implementation ************/
+    const AUTOSAVE_DELAY = 2000; // ms
+    let autosaveTimer = null;
+    let pendingSave = false;
+    let autosaveRetry = 0;
+    const AUTOSAVE_MAX_RETRIES = 5;
 
-    // ---------------- Supabase save/load ----------------
-    async function saveToCloud(){
-      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-        alert('Supabase credentials missing. Please configure SUPABASE_URL and SUPABASE_ANON_KEY.');
-        return;
-      }
-      saveStatus.textContent = 'Saving...';
-      saveCloudBtn.disabled = true;
-      try {
-        const payload = {
-          row: localStorage.getItem(STORAGE_ROW_KEY) || null,
-          items: items
-        };
+    async function cloudCreateOrUpdate(){
+      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Missing supabase config');
+      const cloudId = localStorage.getItem(CLOUD_ID_KEY);
+      const payload = { row: localStorage.getItem(STORAGE_ROW_KEY) || null, items: items };
 
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/lists`, {
+      if(cloudId){
+        // PATCH existing
+        const url = `${SUPABASE_URL}/rest/v1/lists?id=eq.${encodeURIComponent(cloudId)}`;
+        const res = await fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type':'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({ items: payload.items, row: payload.row })
+        });
+        if(!res.ok){
+          const txt = await res.text().catch(()=>null);
+          throw new Error(`PATCH ${res.status} ${txt || ''}`);
+        }
+        const data = await res.json();
+        return data;
+      } else {
+        // POST create
+        const url = `${SUPABASE_URL}/rest/v1/lists`;
+        const res = await fetch(url, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type':'application/json',
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
             'Prefer': 'return=representation'
           },
           body: JSON.stringify(payload)
         });
-
         if(!res.ok){
-          const txt = await res.text();
-          throw new Error('Save failed: ' + res.status + ' ' + txt);
+          const txt = await res.text().catch(()=>null);
+          throw new Error(`POST ${res.status} ${txt || ''}`);
         }
         const data = await res.json();
-        const id = data && data[0] && data[0].id;
-        if(!id) throw new Error('No id returned');
-        const url = `${location.origin}${location.pathname}?share=${id}`;
-        shareLinkInput.value = url;
-        saveStatus.textContent = 'Saved';
-        return id;
-      } catch(err){
-        console.error(err);
-        alert('Could not save to cloud: ' + err.message);
-        saveStatus.textContent = 'Save failed';
-      } finally {
-        saveCloudBtn.disabled = false;
+        if(data && data[0] && data[0].id){
+          localStorage.setItem(CLOUD_ID_KEY, data[0].id);
+        }
+        return data;
       }
     }
 
-    async function loadFromCloudById(id){
-      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-        console.error('Supabase credentials missing');
-        return null;
+    async function performAutoSave(){
+      if(!navigator.onLine){
+        pendingSave = true;
+        saveStatus.textContent = 'Offline — will save when online';
+        return;
       }
-      try {
-        const q = `?id=eq.${id}`;
+      saveStatus.textContent = 'Saving...';
+      try{
+        const res = await cloudCreateOrUpdate();
+        autosaveRetry = 0;
+        pendingSave = false;
+        // update share link if we have id
+        const id = localStorage.getItem(CLOUD_ID_KEY);
+        if(id) shareLinkInput.value = `${location.origin}${location.pathname}?share=${id}`;
+        saveStatus.textContent = 'Saved';
+        setTimeout(()=>saveStatus.textContent='',1400);
+        return res;
+      }catch(err){
+        console.error('autosave error', err);
+        autosaveRetry++;
+        if(autosaveRetry <= AUTOSAVE_MAX_RETRIES){
+          const backoff = Math.min(30000, 500 * (2 ** (autosaveRetry-1)));
+          saveStatus.textContent = `Save failed, retrying in ${Math.round(backoff/1000)}s...`;
+          setTimeout(()=> performAutoSave(), backoff);
+        } else {
+          pendingSave = true;
+          saveStatus.textContent = 'Save failed — will retry when online or on next change';
+        }
+      }
+    }
+
+    function scheduleAutoSave(){
+      if(autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(()=>{
+        autosaveTimer = null;
+        performAutoSave();
+      }, AUTOSAVE_DELAY);
+    }
+
+    // manual save button hooks to immediate save
+    saveNowBtn.addEventListener('click', async ()=>{
+      try{
+        saveStatus.textContent = 'Saving...';
+        await performAutoSave();
+      }catch(e){
+        console.error(e);
+        alert('Save failed: ' + (e.message || e));
+      }
+    });
+
+    // if we go online, flush pending save
+    window.addEventListener('online', () => {
+      if(pendingSave) performAutoSave();
+    });
+
+    // expose debug helpers
+    window._inventory = { scheduleAutoSave, performAutoSave, getCloudId: ()=>localStorage.getItem(CLOUD_ID_KEY) };
+
+    /************ share copy ************/
+    copyShareBtn.addEventListener('click', ()=>{
+      if(!shareLinkInput.value) return;
+      navigator.clipboard.writeText(shareLinkInput.value).then(()=>{
+        saveStatus.textContent = 'Link copied';
+        setTimeout(()=>saveStatus.textContent='',1200);
+      });
+    });
+
+    /************ load/save from cloud on page open ************/
+    async function loadFromCloudById(id){
+      try{
+        const q = `?id=eq.${encodeURIComponent(id)}&select=*`;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/lists${q}`, {
-          method: 'GET',
           headers: {
+            'Accept':'application/json',
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           }
         });
-        if(!res.ok) throw new Error('Load failed: ' + res.status);
+        if(!res.ok){
+          const txt = await res.text().catch(()=>null);
+          throw new Error(`Load failed ${res.status} ${txt || ''}`);
+        }
         const data = await res.json();
         if(!data || !data.length) return null;
         return data[0];
-      } catch(err){
-        console.error(err);
-        alert('Could not load from cloud: ' + err.message);
+      }catch(e){
+        console.error('load error', e);
         return null;
       }
     }
 
-    saveCloudBtn.addEventListener('click', async () => {
-      const id = await saveToCloud();
-      if(id) {
-        shareLinkInput.select();
-      }
-    });
+    (async function init(){
+      // If ?share=ID -> load shared list (do not autosave immediately)
+      const params = new URLSearchParams(location.search);
+      const share = params.get('share');
 
-    copyShareBtn.addEventListener('click', () => {
-      if(!shareLinkInput.value) return;
-      navigator.clipboard.writeText(shareLinkInput.value).then(() => {
-        saveStatus.textContent = 'Link copied';
-        setTimeout(()=> saveStatus.textContent = '', 1500);
-      });
-    });
-
-    // on load: check ?share=ID and auto-load
-    (async function checkShareParamOnLoad(){
-      try{
-        const params = new URLSearchParams(location.search);
-        const share = params.get('share');
-        const saved = localStorage.getItem(STORAGE_ROW_KEY);
-        if(share){
-          saveStatus.textContent = 'Loading shared list...';
-          const rowObj = await loadFromCloudById(share);
-          if(rowObj && rowObj.items){
-            items = rowObj.items;
-            save();
-            render();
-            shareLinkInput.value = location.href;
-            saveStatus.textContent = 'Loaded shared list';
-          } else {
-            saveStatus.textContent = 'No shared list found';
-          }
-        } else if(saved){
-          // if no share param: load from local storage
-          load();
-          render();
+      if(share){
+        saveStatus.textContent = 'Loading shared list...';
+        const row = await loadFromCloudById(share);
+        if(row && row.items){
+          items = Array.isArray(row.items) ? row.items : [];
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); // cache locally too
+          localStorage.setItem(CLOUD_ID_KEY, row.id);
+          shareLinkInput.value = location.href;
+          saveStatus.textContent = 'Shared list loaded';
+        } else {
+          saveStatus.textContent = 'No shared list found';
         }
-      }catch(e){
-        console.error(e);
-      } finally {
-        setTimeout(()=> saveStatus.textContent = '', 1500);
+        render();
+        setTimeout(()=>saveStatus.textContent='',1200);
+        return;
       }
+
+      // otherwise load local
+      loadLocal();
+      render();
+      // if there is already cloud id in localStorage we can show share link
+      const cid = localStorage.getItem(CLOUD_ID_KEY);
+      if(cid) shareLinkInput.value = `${location.origin}${location.pathname}?share=${cid}`;
     })();
 
-    // expose helper for embedding parent pages
-    window.__inventory = {
-      addItemFromCode: window.addItemFromCode,
-      items: () => items.slice()
-    };
+    /************ UI posts: schedule autosave after any change ************/
+    // Already done inside addItem, changeAmount, removeSelected, undoRemove
 
-    // initial load if not from cloud
-    if(!location.search.includes('share=')){
-      load();
-      render();
-    }
+    /************ small UX: press Enter to add ************/
+    objectInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ addBtn.click(); }
+    });
+
+    /************ debug logs to console (optional) ************/
+    // console.log('Inventory loaded. _inventory available for debug');
+
   </script>
 </body>
 </html>
