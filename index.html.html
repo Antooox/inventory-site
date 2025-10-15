@@ -1,366 +1,368 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Shared inventory (Supabase) — autosave</title>
-<style>
-:root{--accent:#16a085;--danger:#e04e4e;--muted:#6b7280}
-body{font-family:Inter,system-ui,Arial;margin:24px;background:#f6f8fa;color:#111}
-.container{max-width:980px;margin:0 auto}
-.card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 10px 30px rgba(10,20,30,.06)}
-h1{margin:0 0 6px;font-size:26px}
-.lead{margin:0 0 16px;color:var(--muted)}
-.controls{display:flex;gap:10px;align-items:center;margin-bottom:14px}
-.controls > *{flex:0}
-.input{padding:10px;border-radius:8px;border:1px solid #e6e9ee;background:#fff;font-size:14px}
-.input.flex{flex:1}
-.btn{background:var(--accent);color:#fff;padding:9px 14px;border-radius:8px;border:0;cursor:pointer}
-.btn.secondary{background:#fff;border:1px solid #e6e9ee;color:#111}
-.btn.danger{background:var(--danger);color:#fff}
-.table{width:100%;border-collapse:collapse;margin-top:12px}
-th,td{padding:12px;border-bottom:1px solid #f2f4f7;text-align:left}
-th{font-weight:700}
-.small{font-size:13px;color:var(--muted)}
-.amount-controls{display:inline-flex;align-items:center;gap:6px}
-.smallbtn{padding:6px 8px;border-radius:8px;border:1px solid #e6e9ee;background:#fff;cursor:pointer}
-.toolbar{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
-.status{margin-top:12px;color:var(--muted);font-size:13px}
-.hidden{display:none}
-@media(max-width:720px){.controls{flex-direction:column;align-items:stretch}.input{width:100%}}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shared inventory — ROW lists</title>
+  <style>
+    :root{--accent:#11998e;--danger:#e05252;--muted:#6c7a86}
+    body{font-family:Inter,system-ui,Arial;margin:24px;background:#f6f7f8;color:#222}
+    .card{background:#fff;border-radius:10px;padding:22px;max-width:980px;margin:0 auto;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    h1{margin:0 0 6px;font-size:26px}
+    p.muted{margin:0 0 14px;color:var(--muted)}
+    label{display:block;margin:8px 0 6px;font-weight:600}
+    input[type=text], input[type=date], select, input[type=number]{width:100%;padding:10px;border-radius:8px;border:1px solid #e1e6ea;box-sizing:border-box}
+    .row{display:flex;gap:12px;align-items:center}
+    .col-2{flex:2} .col-1{flex:1}
+    button{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    th{font-weight:700}
+    .small-btn{background:#fff;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
+    .controls{margin-top:14px;display:flex;gap:12px;align-items:center}
+    .danger{background:var(--danger);color:#fff;border:none;padding:8px 12px;border-radius:8px}
+    .muted{color:var(--muted);font-size:13px}
+    .amount-controls{display:flex;gap:8px;align-items:center}
+    .amount-controls button{background:#fff;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
+    input[type=number]{max-width:90px}
+    .center{display:flex;align-items:center}
+    .checkbox-cell{width:36px}
+  </style>
 </head>
 <body>
-<div class="container">
   <div class="card">
     <h1>Shared inventory</h1>
-    <p class="lead">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
+    <p class="muted">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
 
-    <div class="controls">
-      <input id="inputObject" class="input flex" type="text" placeholder="Object — e.g. Valve ABC-123"/>
-      <input id="inputDate" class="input" type="date"/>
-      <input id="inputAmount" class="input" type="number" min="1" value="1" style="width:96px"/>
-      <button id="btnAdd" class="btn">Add to list</button>
+    <label for="rowSelect">Select row</label>
+    <select id="rowSelect"></select>
+
+    <div style="height:12px"></div>
+
+    <label for="itemObject">Object</label>
+    <input type="text" id="itemObject" placeholder="Object — e.g. Valve ABC-123">
+
+    <div style="height:8px"></div>
+    <div class="row">
+      <div class="col-2">
+        <label for="itemDate">Added date</label>
+        <input type="date" id="itemDate">
+      </div>
+      <div class="col-1">
+        <label for="itemAmount">Amount</label>
+        <input type="number" id="itemAmount" min="1" value="1">
+      </div>
+      <div style="width:170px;align-self:flex-end">
+        <button id="addBtn" style="width:100%">Add to list</button>
+      </div>
     </div>
 
-    <table class="table" aria-live="polite">
+    <table id="itemsTable" aria-live="polite">
       <thead>
         <tr>
-          <th style="width:36px"><input id="chkAll" type="checkbox" /></th>
+          <th class="checkbox-cell"></th>
           <th>Object</th>
-          <th style="width:160px">Amount</th>
+          <th style="width:140px">Amount</th>
           <th style="width:140px">Added date</th>
-          <th style="width:220px">Added at</th>
+          <th style="width:180px">Added at</th>
         </tr>
       </thead>
-      <tbody id="tbody">
-        <tr><td colspan="5" class="small">No items yet</td></tr>
+      <tbody id="itemsBody">
+        <tr><td colspan="5" class="muted">No items yet</td></tr>
       </tbody>
     </table>
 
-    <div class="toolbar">
-      <button id="btnRemoveSelected" class="btn danger">Remove selected</button>
-      <button id="btnUndo" class="btn secondary">Undo remove</button>
-      <button id="btnExport" class="btn secondary">Export CSV</button>
-      <div id="shareArea" style="margin-left:auto" class="small"></div>
+    <div class="controls">
+      <button id="removeSelected" class="danger">Remove selected</button>
+      <button id="undoRemove" class="small-btn">Undo remove</button>
+      <button id="exportCsv" class="small-btn">Export CSV</button>
+      <div style="flex:1"></div>
+      <div id="status" class="muted">Status: idle</div>
     </div>
-
-    <div id="status" class="status">Initializing…</div>
   </div>
-</div>
 
 <script>
-/* ========== CONFIG (inlined as requested) ========== */
+/* ========== CONFIG - (inline keys as requested) ========== */
 const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-const ROW_NAME = 'row1_logistics'; // single shared row
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
+/* ======================================================== */
 
-/* ========== DOM ========== */
-const inputObject = document.getElementById('inputObject');
-const inputDate = document.getElementById('inputDate');
-const inputAmount = document.getElementById('inputAmount');
-const btnAdd = document.getElementById('btnAdd');
-const tbody = document.getElementById('tbody');
-const status = document.getElementById('status');
-const btnRemoveSelected = document.getElementById('btnRemoveSelected');
-const btnUndo = document.getElementById('btnUndo');
-const btnExport = document.getElementById('btnExport');
-const chkAll = document.getElementById('chkAll');
-const shareArea = document.getElementById('shareArea');
+const headers = {
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+  'Content-Type': 'application/json'
+};
 
-/* ========== State ========== */
-let rowId = null;        // uuid of the lists row
-let items = [];          // array of {id,obj,amount,date,added_at, removed:false}
-let lastRemoved = [];    // for undo
+const rowSelect = document.getElementById('rowSelect');
+const itemObject = document.getElementById('itemObject');
+const itemDate = document.getElementById('itemDate');
+const itemAmount = document.getElementById('itemAmount');
+const addBtn = document.getElementById('addBtn');
+const itemsBody = document.getElementById('itemsBody');
+const statusEl = document.getElementById('status');
+const removeSelectedBtn = document.getElementById('removeSelected');
+const undoRemoveBtn = document.getElementById('undoRemove');
+const exportCsvBtn = document.getElementById('exportCsv');
+
+let currentRow = null;
+let currentItems = [];
+let lastRemoved = [];
+let saveTimer = null;
 let saving = false;
 
-/* ========== Helpers ========== */
-const headers = () => ({
-  'apikey': SUPABASE_KEY,
-  'Authorization': 'Bearer ' + SUPABASE_KEY,
-  'Content-Type': 'application/json'
-});
+/* ---------- helpers ---------- */
+function setStatus(s){ statusEl.textContent = 'Status: ' + s; }
+function uid(len=8){ return Math.random().toString(36).slice(2,2+len) + Date.now().toString(36).slice(-4);}
 
-function uid(len=8){
-  const a = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let s=''; for(let i=0;i<len;i++) s+=a[Math.floor(Math.random()*a.length)];
-  return s;
+/* fetch list of rows */
+async function fetchRows(){
+  const url = `${SUPABASE_URL}/rest/v1/lists?select=row`;
+  const res = await fetch(url, { headers });
+  if(!res.ok) throw new Error('fetchRows failed ' + res.status);
+  const arr = await res.json();
+  return arr.map(r => r.row);
 }
 
-function isoNow(){ return new Date().toISOString(); }
-function formatDateLocal(d){ // yyyy-mm-dd
-  if(!d) return '';
-  const dt = new Date(d);
-  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), day = String(dt.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-function humanTime(d){
-  if(!d) return '';
-  return new Date(d).toLocaleString();
-}
-
-/* ========== Rendering ========== */
-function render(){
-  tbody.innerHTML = '';
-  if(!items.length){
-    const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="5" class="small">No items yet</td>';
-    tbody.appendChild(tr);
-    return;
-  }
-  items.forEach(it => {
-    if(it._removed) return; // skip removed (but kept in lastRemoved)
-    const tr = document.createElement('tr');
-    tr.dataset.id = it.id;
-    tr.innerHTML = `
-      <td><input type="checkbox" class="rowchk" data-id="${it.id}" /></td>
-      <td>${escapeHtml(it.object)}</td>
-      <td>
-        <div class="amount-controls">
-          <button class="smallbtn dec" data-id="${it.id}">-</button>
-          <div style="min-width:34px;text-align:center">${it.amount}</div>
-          <button class="smallbtn inc" data-id="${it.id}">+</button>
-        </div>
-      </td>
-      <td>${escapeHtml(it.date||'')}</td>
-      <td class="small">${escapeHtml(it.added_at?humanTime(it.added_at):'')}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-  attachRowHandlers();
-}
-
-function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
-
-function setStatus(txt, err=false){
-  status.textContent = txt;
-  status.style.color = err ? 'var(--danger)' : 'var(--muted)';
-}
-
-/* ========== Supabase REST helpers ========== */
-async function apiGetRow(){
-  const url = `${SUPABASE_URL}/rest/v1/lists?row=eq.${encodeURIComponent(ROW_NAME)}&select=*`;
-  const r = await fetch(url, { method:'GET', headers: headers() });
-  if(!r.ok) throw new Error(`GET failed ${r.status}`);
-  return r.json();
-}
-
-async function apiCreateRow(){
+/* create single row record */
+async function createRow(row){
   const url = `${SUPABASE_URL}/rest/v1/lists`;
-  const body = { row: ROW_NAME, items: [] };
-  const r = await fetch(url, { method:'POST', headers: {...headers(),'Prefer':'return=representation'}, body: JSON.stringify(body) });
-  if(!r.ok) {
-    const txt = await r.text();
-    throw new Error(`POST failed ${r.status} ${txt}`);
+  const body = { row, items: [] };
+  const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
+  // 201 created or 409 conflict etc. ignore errors
+  return res;
+}
+
+/* ensure row1..row20 exist */
+async function ensureRows(){
+  setStatus('ensuring rows exist...');
+  const existing = await fetchRows();
+  const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
+  const missing = desired.filter(r=>!existing.includes(r));
+  for(const r of missing){
+    try{ await createRow(r); } catch(e){ /* ignore */ }
   }
-  return r.json();
+  setStatus('rows ensured');
+  return desired;
 }
 
-async function apiPatchRow(id, newItems){
-  const url = `${SUPABASE_URL}/rest/v1/lists?id=eq.${encodeURIComponent(id)}`;
-  const body = { items: newItems };
-  const r = await fetch(url, { method:'PATCH', headers: {...headers(), 'Prefer':'return=representation'}, body: JSON.stringify(body) });
-  const txt = await r.text();
-  if(!r.ok) throw new Error(`PATCH failed ${r.status} ${txt}`);
-  return JSON.parse(txt);
-}
-
-/* ========== Load or create shared row ========== */
-async function init(){
-  setStatus('Loading shared list...');
+/* populate dropdown */
+async function populateDropdown(){
+  setStatus('loading rows...');
   try{
-    const rows = await apiGetRow();
-    if(rows && rows.length){
-      const r = rows[0];
-      rowId = r.id;
-      items = (r.items || []).map(it => ({...it}));
-      setStatus('Loaded list from cloud.');
+    let rows = await fetchRows();
+    if(rows.length === 0){
+      rows = await ensureRows();
     } else {
-      // create initial row
-      const created = await apiCreateRow();
-      rowId = created[0].id;
-      items = [];
-      setStatus('Created shared list (empty).');
+      const desired = Array.from({length:20}, (_,i)=>'row'+(i+1));
+      for(const r of desired){
+        if(!rows.includes(r)){ try{ await createRow(r); rows.push(r); } catch(e){} }
+      }
+      rows = Array.from(new Set(rows)).sort();
     }
-    render();
-  }catch(err){
-    console.error(err);
-    setStatus('Failed to load or create row: ' + err.message, true);
+    rowSelect.innerHTML = '';
+    rows.forEach(r=>{
+      const o = document.createElement('option'); o.value = r; o.textContent = r.toUpperCase();
+      rowSelect.appendChild(o);
+    });
+    currentRow = rowSelect.value;
+    setStatus('rows loaded');
+  } catch(e){
+    console.error(e); setStatus('failed loading rows');
   }
 }
 
-/* ========== Save: patch the row items array ========== */
-let saveTimer = null;
-function scheduleSave(immediate=false){
+/* load items for a specific row */
+async function loadItemsForRow(row){
+  setStatus('loading items for ' + row);
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(row)}`;
+    const res = await fetch(url, { headers });
+    if(!res.ok){ throw new Error('load failed ' + res.status); }
+    const arr = await res.json();
+    const items = (arr[0] && arr[0].items) ? arr[0].items : [];
+    currentItems = items;
+    renderItems();
+    setStatus('loaded');
+  } catch(e){
+    console.error(e); setStatus('failed to load items');
+  }
+}
+
+/* render items into table */
+function renderItems(){
+  itemsBody.innerHTML = '';
+  if(!currentItems || currentItems.length === 0){
+    const tr = document.createElement('tr');
+    const td = document.createElement('td'); td.colSpan = 5; td.className='muted'; td.textContent='No items yet';
+    tr.appendChild(td); itemsBody.appendChild(tr); return;
+  }
+  currentItems.forEach((it, idx)=>{
+    const tr = document.createElement('tr');
+
+    const chTd = document.createElement('td'); chTd.className = 'checkbox-cell';
+    const chk = document.createElement('input'); chk.type='checkbox'; chk.dataset.idx = idx;
+    chTd.appendChild(chk);
+
+    const objTd = document.createElement('td'); objTd.textContent = it.object || '';
+
+    const amountTd = document.createElement('td');
+    const amountWrap = document.createElement('div'); amountWrap.className='amount-controls';
+    const minus = document.createElement('button'); minus.textContent='-'; minus.className='small-btn';
+    const num = document.createElement('span'); num.textContent = (it.amount || 1);
+    const plus = document.createElement('button'); plus.textContent='+'; plus.className='small-btn';
+    minus.onclick = ()=>{ adjustAmount(idx, -1); };
+    plus.onclick = ()=>{ adjustAmount(idx, +1); };
+    amountWrap.appendChild(minus); amountWrap.appendChild(num); amountWrap.appendChild(plus);
+    amountTd.appendChild(amountWrap);
+
+    const dateTd = document.createElement('td'); dateTd.textContent = it.added_date || '';
+
+    const atTd = document.createElement('td'); atTd.textContent = it.added_at || '';
+
+    tr.appendChild(chTd); tr.appendChild(objTd); tr.appendChild(amountTd); tr.appendChild(dateTd); tr.appendChild(atTd);
+    itemsBody.appendChild(tr);
+  });
+}
+
+/* adjust amount for item index */
+function adjustAmount(idx, delta){
+  const it = currentItems[idx];
+  if(!it) return;
+  let newAmt = Number(it.amount || 0) + delta;
+  if(newAmt < 0) newAmt = 0;
+  currentItems[idx].amount = newAmt;
+  renderItems();
+  scheduleSave();
+}
+
+/* schedule a debounced save */
+function scheduleSave(){
   if(saveTimer) clearTimeout(saveTimer);
-  if(immediate){
-    doSave();
-  } else {
-    saveTimer = setTimeout(doSave, 400);
-  }
+  setStatus('changes pending...');
+  saveTimer = setTimeout(()=>{ saveItemsToCloud(); }, 700);
 }
 
-async function doSave(){
-  if(!rowId){ setStatus('No row id — cannot save', true); return; }
+/* save currentItems to supabase (PATCH) */
+async function saveItemsToCloud(){
+  if(!currentRow) return;
+  if(saving) return; // optionally ignore concurrent
   saving = true;
-  setStatus('Saving…');
-  const toSave = items.filter(i => !i._removed).map(i => ({
-    id: i.id, object: i.object, amount: i.amount, date: i.date, added_at: i.added_at
-  }));
+  setStatus('saving...');
   try{
-    await apiPatchRow(rowId, toSave);
+    const url = `${SUPABASE_URL}/rest/v1/lists?row=eq.${encodeURIComponent(currentRow)}`;
+    const body = { items: currentItems };
+    // prefer return representation to get updated row
+    const h = Object.assign({}, headers, { 'Prefer': 'return=representation' });
+    const res = await fetch(url, { method:'PATCH', headers:h, body: JSON.stringify(body) });
+    if(!res.ok){ throw new Error('save failed ' + res.status); }
+    setStatus('saved');
+  } catch(e){
+    console.error(e);
+    setStatus('save failed');
+  } finally {
     saving = false;
-    setStatus('Saved at ' + new Date().toLocaleTimeString());
-  }catch(err){
-    saving = false;
-    console.error('save error', err);
-    setStatus('Save failed: ' + err.message, true);
   }
 }
 
-/* ========== UI actions: add, inc/dec, remove, undo ========== */
-btnAdd.addEventListener('click', async ()=>{
-  const obj = (inputObject.value||'').trim();
-  if(!obj){ inputObject.focus(); return; }
-  const dt = inputDate.value ? inputDate.value : formatDateLocal(new Date());
-  const amount = Math.max(1, parseInt(inputAmount.value) || 1);
-  const it = { id: uid(12), object: obj, amount: amount, date: dt, added_at: isoNow() };
-  items.push(it);
-  render();
-  inputObject.value = ''; inputAmount.value = '1';
-  scheduleSave(); // autosave
-});
-
-function attachRowHandlers(){
-  // inc / dec
-  document.querySelectorAll('.inc').forEach(b=>{
-    b.onclick = (e)=>{
-      const id = b.dataset.id;
-      const it = items.find(x=>x.id===id); if(!it) return;
-      it.amount = Number(it.amount||0) + 1;
-      render();
-      scheduleSave();
-    };
-  });
-  document.querySelectorAll('.dec').forEach(b=>{
-    b.onclick = (e)=>{
-      const id = b.dataset.id;
-      const it = items.find(x=>x.id===id); if(!it) return;
-      it.amount = Math.max(1, Number(it.amount||0) - 1);
-      render();
-      scheduleSave();
-    };
-  });
-  // checkboxes
-  document.querySelectorAll('.rowchk').forEach(cb=>{
-    cb.onchange = ()=>{ /* nothing immediate */ };
-  });
+/* add new item from inputs */
+function addItemFromForm(){
+  const obj = itemObject.value && itemObject.value.trim();
+  if(!obj){ alert('Object name is required'); return; }
+  const dateVal = itemDate.value || new Date().toISOString().slice(0,10);
+  const amountVal = Number(itemAmount.value) || 1;
+  const newItem = {
+    id: uid(6),
+    object: obj,
+    amount: amountVal,
+    added_date: dateVal,
+    added_at: new Date().toLocaleString()
+  };
+  currentItems.push(newItem);
+  renderItems();
+  itemObject.value=''; itemAmount.value = 1;
+  scheduleSave();
 }
 
-/* Remove selected */
-btnRemoveSelected.addEventListener('click', ()=>{
-  const checks = Array.from(document.querySelectorAll('.rowchk')).filter(c=>c.checked);
-  if(!checks.length){ alert('No rows selected'); return; }
-  lastRemoved = checks.map(c=>{
-    const id = c.dataset.id;
-    const it = items.find(x=>x.id===id);
-    if(it) { it._removed = true; return it; }
-    return null;
-  }).filter(Boolean);
-  render();
+/* remove selected items */
+function removeSelected(){
+  const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]'));
+  const idxs = checks.filter(c=>c.checked).map(c=>Number(c.dataset.idx)).sort((a,b)=>b-a);
+  if(idxs.length === 0) return alert('No items selected');
+  lastRemoved = idxs.map(i => currentItems[i]); // store removed
+  for(const i of idxs){ currentItems.splice(i,1); }
+  renderItems();
   scheduleSave();
-  setStatus(`${lastRemoved.length} removed — click Undo remove to restore`);
-});
+}
 
-/* Undo */
-btnUndo.addEventListener('click', ()=>{
-  if(!lastRemoved.length){ setStatus('Nothing to undo'); return; }
-  lastRemoved.forEach(r=>{
-    const idx = items.findIndex(x=>x.id===r.id);
-    if(idx>=0) items[idx]._removed = false;
-    else items.push(r);
-  });
+/* undo last remove */
+function undoRemove(){
+  if(!lastRemoved || lastRemoved.length === 0) return alert('Nothing to undo');
+  currentItems = currentItems.concat(lastRemoved);
   lastRemoved = [];
-  render();
+  renderItems();
   scheduleSave();
-});
+}
 
-/* Export CSV */
-btnExport.addEventListener('click', ()=>{
-  if(!items.length){ alert('No items'); return; }
-  const rows = items.filter(i=>!i._removed).map(i => [i.object, i.amount, i.date, i.added_at]);
-  const csv = ['Object,Amount,Added date,Added at', ...rows.map(r => r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
+/* export CSV */
+function exportCsv(){
+  if(!currentItems || currentItems.length === 0) return alert('No items to export');
+  const rows = [['id','object','amount','added_date','added_at']];
+  currentItems.forEach(it => rows.push([it.id||'', it.object||'', it.amount||'', it.added_date||'', it.added_at||'']));
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'inventory.csv'; document.body.appendChild(a); a.click(); a.remove();
-});
+  const a = document.createElement('a'); a.href = url; a.download = (currentRow || 'list') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 
-/* select all checkbox */
-chkAll.addEventListener('change', ()=>{
-  const on = chkAll.checked;
-  document.querySelectorAll('.rowchk').forEach(c=>c.checked = on);
-});
+/* row change handler */
+async function onRowChange(){
+  currentRow = rowSelect.value;
+  await loadItemsForRow(currentRow);
+}
 
-/* ========== Init flow ========== */
-(async function(){
-  setStatus('Initializing connection to Supabase...');
-  try{
-    // quick check: try GET, if 200 proceed
-    await init();
-  }catch(err){
-    console.error(err);
-    setStatus('Initialization failed: ' + err.message, true);
-  }
-})();
+/* init: populate rows, select first, load items */
+async function init(){
+  setStatus('initializing...');
+  await populateDropdown();
+  rowSelect.addEventListener('change', onRowChange);
+  addBtn.addEventListener('click', addItemFromForm);
+  removeSelectedBtn.addEventListener('click', removeSelected);
+  undoRemoveBtn.addEventListener('click', undoRemove);
+  exportCsvBtn.addEventListener('click', exportCsv);
 
-/* Save beforeunload (best-effort) */
-window.addEventListener('beforeunload', function(e){
-  if(saving) return;
-  if(items.length) navigator.sendBeacon && navigator.sendBeacon(`${SUPABASE_URL}/rest/v1/lists?id=eq.${encodeURIComponent(rowId)}`, JSON.stringify({ items: items.filter(i=>!i._removed) }));
-});
+  // set default date to today
+  itemDate.value = new Date().toISOString().slice(0,10);
 
-/* optional: keep UI live by polling occasionally in case others update the shared list */
-setInterval(async ()=>{
-  try{
-    const rows = await apiGetRow();
-    if(rows && rows.length){
-      const r = rows[0];
-      // simple merge: if cloud's items differ from local and local hasn't edited recently, replace
-      const cloud = r.items || [];
-      // quick compare by JSON
-      const localJson = JSON.stringify(items.filter(i=>!i._removed).map(i=>({...i})));
-      const cloudJson = JSON.stringify(cloud);
-      if(localJson !== cloudJson){
-        // update local to cloud state
-        items = cloud.map(it=>({...it}));
-        render();
+  // load initial row items
+  currentRow = rowSelect.value;
+  await loadItemsForRow(currentRow);
+
+  // optional: poll for remote changes every 6s — simple
+  setInterval(async () => {
+    // quick check: re-load remote items and update UI if different
+    try{
+      const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(currentRow)}`;
+      const res = await fetch(url, { headers });
+      if(!res.ok) return;
+      const arr = await res.json();
+      const remoteItems = (arr[0] && arr[0].items) ? arr[0].items : [];
+      // naive compare length+ids
+      const same = JSON.stringify(remoteItems) === JSON.stringify(currentItems);
+      if(!same){
+        currentItems = remoteItems;
+        renderItems();
         setStatus('List updated from cloud (remote changes).');
       }
-    }
-  }catch(e){
-    // ignore silently
-  }
-}, 5000);
+    }catch(e){}
+  }, 6000);
+
+  setStatus('ready');
+}
+
+/* run init */
+init().catch(e=>{ console.error(e); setStatus('init failed'); });
 
 </script>
 </body>
