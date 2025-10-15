@@ -3,494 +3,238 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple inventory (Supabase autosave)</title>
+  <title>Shared Inventory</title>
   <style>
-    :root{
-      --card-bg: #fff;
-      --muted: #6b7280;
-      --accent: #14b8a6;
-      --accent-dark: #0f766e;
-      --danger: #ef4444;
-      --radius: 10px;
-      --gap: 12px;
-    }
-    body{
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background:#f3f4f6;
-      margin:0;
-      color:#111827;
-      -webkit-font-smoothing:antialiased;
-    }
-    .wrap{ max-width:1000px; margin:36px auto; padding:18px; }
-    .card{ background:var(--card-bg); padding:22px; border-radius:var(--radius); box-shadow:0 8px 30px rgba(2,6,23,0.06); }
-    h1{ margin:0 0 6px 0; font-size:26px; }
-    p.lead{ color:var(--muted); margin:6px 0 16px 0; }
-
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
-    .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
-    label { font-size:13px; color:#374151; }
-    input[type="text"], input[type="date"], input[type="number"]{
-      padding:10px 12px; height:44px; border-radius:8px; border:1px solid #e6eef2; font-size:15px;
-      background:white;
-    }
-    input[type="number"]{ width:110px; }
-
-    .btn { border:0; border-radius:10px; padding:9px 14px; cursor:pointer; font-weight:700; }
-    .btn-primary { background:var(--accent); color:white; }
-    .btn-primary:active { background:var(--accent-dark); }
-    .btn-danger { background:var(--danger); color:white; }
-    .btn-ghost { background:#f1f5f9; color:#0f1720; border:1px solid #e6eef2; }
-    .btn-undo { background:#eef2f6; color:#0b5562; border:1px solid #d1e6ea; }
-
-    table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:14px; }
-    thead th{ text-align:left; padding:12px 8px; color:#64748b; font-weight:700; border-bottom:1px solid #eef2f7; }
-    tbody td{ padding:12px 8px; border-bottom:1px solid #f3f6f9; vertical-align:middle; }
-    .checkbox{ width:18px; height:18px; }
-
-    .amount-controls { display:flex; gap:6px; align-items:center; }
-    .amt-btn { background:#ffffff; border:1px solid #e6eef2; padding:6px 8px; border-radius:6px; cursor:pointer; font-weight:700; }
-    .amt-value { min-width:36px; text-align:center; display:inline-block; }
-
-    .actions { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
-    .status { color:#374151; font-size:13px; }
-
-    #shareLink { padding:8px; border-radius:8px; border:1px solid #e6eef2; min-width:260px; background:white; }
-    #copyShare { padding:8px 10px; border-radius:8px; background:#2563eb; color:white; border:0; cursor:pointer; }
-
-    @media(max-width:640px){
-      .row { flex-direction:column; align-items:stretch; }
-      input[type="number"]{ width:100%; }
-      #shareLink{ width:100%; }
-    }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:#f6f7f9; padding:30px}
+    .card{max-width:900px;margin:0 auto;background:#fff;border-radius:12px;padding:22px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+    h1{margin:0 0 12px}
+    .row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    input[type="text"], input[type="date"]{padding:10px 12px;border-radius:8px;border:1px solid #e0e3e8;flex:1}
+    button{background:#0ea5a4;color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    .amount-controls{display:flex;gap:6px;align-items:center}
+    .minus, .plus{width:32px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer}
+    .danger{background:#ef4444}
+    .muted{color:#657084;font-size:13px}
+    .small{font-size:13px;padding:7px 10px}
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Simple inventory</h1>
-      <p class="lead">Add items, adjust amounts, remove and export CSV. The list autosaves to the cloud automatically.</p>
+  <div class="card">
+    <h1>Shared inventory</h1>
+    <p class="muted">Add items here — everyone who opens this page will see the same list.</p>
 
-      <div id="controls" class="row" style="margin-bottom:8px;">
-        <div class="field" style="flex:1;min-width:160px;">
-          <label for="objectInput">Object</label>
-          <input id="objectInput" type="text" placeholder="Ex: Valve ABC-123" />
-        </div>
+    <div class="row">
+      <input id="objectInput" type="text" placeholder="Ex: Valve ABC-123" />
+      <input id="dateInput" type="date" />
+      <input id="amountInput" type="number" min="1" value="1" style="width:80px" />
+      <button id="addBtn">Add to list</button>
+    </div>
 
-        <div class="field" style="width:150px;">
-          <label for="dateInput">Added date</label>
-          <input id="dateInput" type="date" />
-        </div>
+    <table id="itemsTable">
+      <thead>
+        <tr><th></th><th>Object</th><th>Amount</th><th>Added date</th><th>Added at</th></tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="5" class="muted">No items yet</td></tr>
+      </tbody>
+    </table>
 
-        <div class="field" style="width:120px;">
-          <label for="amountInput">Amount</label>
-          <input id="amountInput" type="number" min="1" value="1" />
-        </div>
-
-        <div style="margin-left:auto;">
-          <button id="addBtn" class="btn btn-primary">Add to list</button>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <table aria-describedby="tableDesc">
-          <thead>
-            <tr>
-              <th style="width:36px;"><input id="selectAll" type="checkbox" class="checkbox" /></th>
-              <th>Object</th>
-              <th style="width:160px">Amount</th>
-              <th style="width:140px">Added date</th>
-              <th style="width:180px">Added at</th>
-            </tr>
-          </thead>
-          <tbody id="tbody">
-            <tr><td colspan="5" style="color:#94a3b8;padding:18px;">No entries yet</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="actions">
-        <button id="removeBtn" class="btn btn-danger">Remove selected</button>
-        <button id="undoBtn" class="btn btn-undo">Undo remove</button>
-        <button id="exportBtn" class="btn btn-ghost">Export CSV</button>
-
-        <div style="margin-left: auto; display:flex; gap:8px; align-items:center;">
-          <button id="saveNowBtn" class="btn btn-ghost">Save now</button>
-          <input id="shareLink" readonly placeholder="Share link will appear here" />
-          <button id="copyShare" title="Copy link">Copy</button>
-        </div>
-
-        <div style="margin-left:8px;"><span id="saveStatus" class="status"></span></div>
-      </div>
-
-      <p id="tableDesc" style="color:var(--muted); margin-top:12px;">Shareable lists are stored in Supabase.</p>
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button id="removeBtn" class="small danger">Remove selected</button>
+      <button id="undoBtn" class="small">Undo remove</button>
+      <button id="exportBtn" class="small">Export CSV</button>
+      <span id="status" class="muted" style="margin-left:auto"></span>
     </div>
   </div>
 
-  <script>
-    /*************************************************
-     * Supabase config: (inserted per your request)
-     * NOTE: this anon key is public for client use.
-     * Protect it if this becomes production.
-     *************************************************/
-    const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
+<script>
+/* ========== CONFIG - replace with your values ========== */
+const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co'; // <-- replace
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY'; // <-- replace
+const ROW_KEY = 'row1_logistics'; // shared key for this page
+/* ====================================================== */
 
-    /************ DOM elements ************/
-    const objectInput = document.getElementById('objectInput');
-    const dateInput = document.getElementById('dateInput');
-    const amountInput = document.getElementById('amountInput');
-    const addBtn = document.getElementById('addBtn');
+const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const tbody = document.getElementById('tbody');
-    const selectAll = document.getElementById('selectAll');
-    const removeBtn = document.getElementById('removeBtn');
-    const undoBtn = document.getElementById('undoBtn');
-    const exportBtn = document.getElementById('exportBtn');
+let listRowId = null;   // uuid of the row in DB
+let items = [];         // local copy of items array
+let lastRemoved = null; // for undo
 
-    const saveNowBtn = document.getElementById('saveNowBtn');
-    const shareLinkInput = document.getElementById('shareLink');
-    const copyShareBtn = document.getElementById('copyShare');
-    const saveStatus = document.getElementById('saveStatus');
+const $object = document.getElementById('objectInput');
+const $date = document.getElementById('dateInput');
+const $amount = document.getElementById('amountInput');
+const $add = document.getElementById('addBtn');
+const $tbody = document.getElementById('tbody');
+const $remove = document.getElementById('removeBtn');
+const $undo = document.getElementById('undoBtn');
+const $export = document.getElementById('exportBtn');
+const $status = document.getElementById('status');
 
-    /************ State & storage keys ************/
-    let items = []; // { id, object, amount, addedDate, addedAt }
-    let lastRemoved = [];
-    const STORAGE_KEY = 'inventory_items_v1';
-    const CLOUD_ID_KEY = 'inventory_cloud_id';
-    const STORAGE_ROW_KEY = 'inventory_current_row';
+window.addEventListener('load', init);
 
-    /************ utility ************/
-    function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-    function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+async function init(){
+  $date.value = new Date().toISOString().slice(0,10);
+  $add.onclick = onAdd;
+  $remove.onclick = onRemoveSelected;
+  $undo.onclick = onUndo;
+  $export.onclick = onExportCSV;
+  await loadOrCreateListRow();
+  render();
+}
 
-    /************ default date ************/
-    (function setDefaultDate(){
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      dateInput.value = `${yyyy}-${mm}-${dd}`;
-    })();
+async function loadOrCreateListRow(){
+  setStatus('Loading...');
+  // 1) try to read existing row by ROW_KEY
+  const { data, error } = await supabase.from('lists').select('*').eq('row', ROW_KEY).limit(1).maybeSingle();
+  if (error){
+    console.error('select error', error);
+    setStatus('Failed to load');
+    return;
+  }
+  if (data){
+    listRowId = data.id;
+    items = data.items || [];
+    setStatus('Loaded');
+    return;
+  }
+  // 2) create row if not exists
+  const toInsert = { row: ROW_KEY, items: [] };
+  const { data: ins, error: insErr } = await supabase.from('lists').insert([toInsert]).select().maybeSingle();
+  if (insErr){
+    console.error('insert error', insErr);
+    setStatus('Failed to create');
+    return;
+  }
+  listRowId = ins.id;
+  items = ins.items || [];
+  setStatus('Created shared list');
+}
 
-    /************ local storage helpers ************/
-    function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
-    function loadLocal(){ const raw = localStorage.getItem(STORAGE_KEY); items = raw ? JSON.parse(raw) : []; }
+function makeRowHtml(item, idx){
+  const checked = item._checked ? 'checked' : '';
+  return `
+    <tr data-idx="${idx}">
+      <td><input type="checkbox" class="sel" ${checked}></td>
+      <td>${escapeHtml(item.object)}</td>
+      <td>
+        <div class="amount-controls">
+          <button class="minus" data-action="dec">-</button>
+          <span class="muted">${item.amount}</span>
+          <button class="plus" data-action="inc">+</button>
+        </div>
+      </td>
+      <td>${item.addedDate || ''}</td>
+      <td>${item.addedAt || ''}</td>
+    </tr>
+  `;
+}
 
-    /************ render ************/
-    function render(){
-      tbody.innerHTML = '';
-      if(!items.length){
-        const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="5" style="color:#94a3b8;padding:18px;">No entries yet</td>';
-        tbody.appendChild(tr);
-        return;
-      }
-      for(const it of items){
-        const tr = document.createElement('tr');
-        tr.dataset.id = it.id;
-        tr.innerHTML = `
-          <td><input class="row-check checkbox" type="checkbox" data-id="${it.id}"></td>
-          <td>${escapeHtml(it.object)}</td>
-          <td>
-            <div class="amount-controls" data-id="${it.id}">
-              <button class="amt-btn btn-decr" data-id="${it.id}" aria-label="decrease">−</button>
-              <span class="amt-value" data-id="${it.id}">${it.amount}</span>
-              <button class="amt-btn btn-incr" data-id="${it.id}" aria-label="increase">+</button>
-            </div>
-          </td>
-          <td>${escapeHtml(it.addedDate)}</td>
-          <td>${escapeHtml(it.addedAt)}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    }
-
-    /************ modify items ************/
-    function addItem(text, dateVal, amountVal){
-      if(!text || !String(text).trim()) return;
-      const now = new Date();
-      const item = {
-        id: uid(),
-        object: String(text).trim(),
-        amount: Math.max(1, Number(amountVal) || 1),
-        addedDate: dateVal || dateInput.value || '',
-        addedAt: now.toLocaleString()
-      };
-      items.unshift(item);
-      saveLocal();
+function render(){
+  if (!items || items.length === 0){
+    $tbody.innerHTML = `<tr><td colspan="5" class="muted">No items yet</td></tr>`;
+    return;
+  }
+  $tbody.innerHTML = items.map((it, i) => makeRowHtml(it,i)).join('');
+  // attach handlers for amount +/- and checkbox change
+  document.querySelectorAll('#tbody .minus, #tbody .plus').forEach(btn=>{
+    btn.onclick = (e)=>{
+      const tr = e.target.closest('tr');
+      const idx = Number(tr.dataset.idx);
+      if (e.target.dataset.action === 'inc') items[idx].amount = Number(items[idx].amount || 0) + 1;
+      else items[idx].amount = Math.max(1, Number(items[idx].amount || 1) - 1);
+      saveItemsDebounced();
       render();
-      scheduleAutoSave();
-    }
+    };
+  });
+  document.querySelectorAll('#tbody .sel').forEach(ch=>{
+    ch.onchange = (e)=>{
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      items[idx]._checked = e.target.checked;
+    };
+  });
+}
 
-    function removeSelected(){
-      const checks = Array.from(document.querySelectorAll('.row-check:checked'));
-      if(!checks.length) return;
-      const ids = checks.map(c => c.dataset.id);
-      lastRemoved = items.filter(i => ids.includes(i.id));
-      items = items.filter(i => !ids.includes(i.id));
-      saveLocal();
-      render();
-      selectAll.checked = false;
-      scheduleAutoSave();
-    }
+async function onAdd(){
+  const object = $object.value.trim();
+  const addedDate = $date.value || new Date().toISOString().slice(0,10);
+  const amount = Math.max(1, Number($amount.value || 1));
+  if (!object) return alert('Please enter an object name');
+  const newItem = {
+    id: generateId(),
+    object,
+    amount,
+    addedDate,
+    addedAt: new Date().toISOString()
+  };
+  items.push(newItem);
+  $object.value = '';
+  $amount.value = 1;
+  render();
+  await saveItems(); // immediate save
+}
 
-    function undoRemove(){
-      if(!lastRemoved.length) return;
-      items = lastRemoved.concat(items);
-      lastRemoved = [];
-      saveLocal();
-      render();
-      scheduleAutoSave();
-    }
+async function onRemoveSelected(){
+  const selected = items.filter(i => i._checked);
+  if (!selected.length) return alert('Select at least one row');
+  lastRemoved = selected;
+  items = items.filter(i => !i._checked);
+  await saveItems();
+  render();
+}
 
-    function changeAmount(id, delta){
-      const idx = items.findIndex(i=>i.id===id);
-      if(idx===-1) return;
-      items[idx].amount = Math.max(1, Number(items[idx].amount) + delta);
-      saveLocal();
-      render();
-      scheduleAutoSave();
-    }
+async function onUndo(){
+  if (!lastRemoved) return;
+  items = items.concat(lastRemoved);
+  lastRemoved = null;
+  await saveItems();
+  render();
+}
 
-    /************ export CSV ************/
-    function exportCSV(){
-      if(!items.length){ alert('No items to export'); return; }
-      const lines = [];
-      lines.push(['Object','Amount','AddedDate','AddedAt'].join(','));
-      items.slice().reverse().forEach(it=>{
-        const row = [
-          `"${it.object.replaceAll('"','""')}"`,
-          `"${it.amount}"`,
-          `"${it.addedDate}"`,
-          `"${it.addedAt}"`
-        ];
-        lines.push(row.join(','));
-      });
-      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'inventory.csv';
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    }
+function onExportCSV(){
+  const rows = items.map(i => [i.object, i.amount, i.addedDate, i.addedAt]);
+  const csv = [['object','amount','addedDate','addedAt'], ...rows].map(r => r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='inventory.csv'; a.click(); URL.revokeObjectURL(url);
+}
 
-    /************ event wiring ************/
-    addBtn.addEventListener('click', ()=> {
-      addItem(objectInput.value, dateInput.value, Number(amountInput.value || 1));
-      objectInput.value=''; amountInput.value=1; objectInput.focus();
-    });
+/* ============= persistence ============= */
 
-    removeBtn.addEventListener('click', removeSelected);
-    undoBtn.addEventListener('click', undoRemove);
-    exportBtn.addEventListener('click', exportCSV);
+let saveTimer = null;
+function saveItemsDebounced(){
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=> saveItems(), 400);
+}
 
-    selectAll.addEventListener('change', (e)=>{
-      const checks = Array.from(document.querySelectorAll('.row-check'));
-      checks.forEach(c=>c.checked = e.target.checked);
-    });
+async function saveItems(){
+  if (!listRowId){
+    // fallback: try to create row and retry
+    await loadOrCreateListRow();
+    if (!listRowId){ setStatus('Cannot create row'); return; }
+  }
+  setStatus('Saving...');
+  const payload = { items };
+  const { data, error } = await supabase.from('lists').update(payload).eq('id', listRowId).select().maybeSingle();
+  if (error){
+    console.error('save error', error);
+    setStatus('Save failed');
+    return;
+  }
+  // success
+  items = data.items || [];
+  setStatus('Saved');
+}
 
-    document.addEventListener('change', (e)=>{
-      if(e.target && e.target.classList && e.target.classList.contains('row-check')){
-        const all = Array.from(document.querySelectorAll('.row-check'));
-        const checked = all.filter(c=>c.checked).length;
-        selectAll.checked = all.length && (checked === all.length);
-      }
-    });
+/* ============= helpers ============= */
 
-    document.addEventListener('click', (e)=>{
-      const t = e.target;
-      if(t.matches('.btn-incr') || t.matches('.btn-decr') || t.classList.contains('btn-incr') || t.classList.contains('btn-decr')){
-        const id = t.dataset.id;
-        changeAmount(id, t.matches('.btn-incr') || t.classList.contains('btn-incr') ? 1 : -1);
-      }
-    });
+function generateId(){ return 'id-' + Math.random().toString(36).slice(2,10); }
 
-    /************ Autosave implementation ************/
-    const AUTOSAVE_DELAY = 2000; // ms
-    let autosaveTimer = null;
-    let pendingSave = false;
-    let autosaveRetry = 0;
-    const AUTOSAVE_MAX_RETRIES = 5;
+function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-    async function cloudCreateOrUpdate(){
-      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Missing supabase config');
-      const cloudId = localStorage.getItem(CLOUD_ID_KEY);
-      const payload = { row: localStorage.getItem(STORAGE_ROW_KEY) || null, items: items };
-
-      if(cloudId){
-        // PATCH existing
-        const url = `${SUPABASE_URL}/rest/v1/lists?id=eq.${encodeURIComponent(cloudId)}`;
-        const res = await fetch(url, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type':'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({ items: payload.items, row: payload.row })
-        });
-        if(!res.ok){
-          const txt = await res.text().catch(()=>null);
-          throw new Error(`PATCH ${res.status} ${txt || ''}`);
-        }
-        const data = await res.json();
-        return data;
-      } else {
-        // POST create
-        const url = `${SUPABASE_URL}/rest/v1/lists`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type':'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify(payload)
-        });
-        if(!res.ok){
-          const txt = await res.text().catch(()=>null);
-          throw new Error(`POST ${res.status} ${txt || ''}`);
-        }
-        const data = await res.json();
-        if(data && data[0] && data[0].id){
-          localStorage.setItem(CLOUD_ID_KEY, data[0].id);
-        }
-        return data;
-      }
-    }
-
-    async function performAutoSave(){
-      if(!navigator.onLine){
-        pendingSave = true;
-        saveStatus.textContent = 'Offline — will save when online';
-        return;
-      }
-      saveStatus.textContent = 'Saving...';
-      try{
-        const res = await cloudCreateOrUpdate();
-        autosaveRetry = 0;
-        pendingSave = false;
-        // update share link if we have id
-        const id = localStorage.getItem(CLOUD_ID_KEY);
-        if(id) shareLinkInput.value = `${location.origin}${location.pathname}?share=${id}`;
-        saveStatus.textContent = 'Saved';
-        setTimeout(()=>saveStatus.textContent='',1400);
-        return res;
-      }catch(err){
-        console.error('autosave error', err);
-        autosaveRetry++;
-        if(autosaveRetry <= AUTOSAVE_MAX_RETRIES){
-          const backoff = Math.min(30000, 500 * (2 ** (autosaveRetry-1)));
-          saveStatus.textContent = `Save failed, retrying in ${Math.round(backoff/1000)}s...`;
-          setTimeout(()=> performAutoSave(), backoff);
-        } else {
-          pendingSave = true;
-          saveStatus.textContent = 'Save failed — will retry when online or on next change';
-        }
-      }
-    }
-
-    function scheduleAutoSave(){
-      if(autosaveTimer) clearTimeout(autosaveTimer);
-      autosaveTimer = setTimeout(()=>{
-        autosaveTimer = null;
-        performAutoSave();
-      }, AUTOSAVE_DELAY);
-    }
-
-    // manual save button hooks to immediate save
-    saveNowBtn.addEventListener('click', async ()=>{
-      try{
-        saveStatus.textContent = 'Saving...';
-        await performAutoSave();
-      }catch(e){
-        console.error(e);
-        alert('Save failed: ' + (e.message || e));
-      }
-    });
-
-    // if we go online, flush pending save
-    window.addEventListener('online', () => {
-      if(pendingSave) performAutoSave();
-    });
-
-    // expose debug helpers
-    window._inventory = { scheduleAutoSave, performAutoSave, getCloudId: ()=>localStorage.getItem(CLOUD_ID_KEY) };
-
-    /************ share copy ************/
-    copyShareBtn.addEventListener('click', ()=>{
-      if(!shareLinkInput.value) return;
-      navigator.clipboard.writeText(shareLinkInput.value).then(()=>{
-        saveStatus.textContent = 'Link copied';
-        setTimeout(()=>saveStatus.textContent='',1200);
-      });
-    });
-
-    /************ load/save from cloud on page open ************/
-    async function loadFromCloudById(id){
-      try{
-        const q = `?id=eq.${encodeURIComponent(id)}&select=*`;
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/lists${q}`, {
-          headers: {
-            'Accept':'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          }
-        });
-        if(!res.ok){
-          const txt = await res.text().catch(()=>null);
-          throw new Error(`Load failed ${res.status} ${txt || ''}`);
-        }
-        const data = await res.json();
-        if(!data || !data.length) return null;
-        return data[0];
-      }catch(e){
-        console.error('load error', e);
-        return null;
-      }
-    }
-
-    (async function init(){
-      // If ?share=ID -> load shared list (do not autosave immediately)
-      const params = new URLSearchParams(location.search);
-      const share = params.get('share');
-
-      if(share){
-        saveStatus.textContent = 'Loading shared list...';
-        const row = await loadFromCloudById(share);
-        if(row && row.items){
-          items = Array.isArray(row.items) ? row.items : [];
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); // cache locally too
-          localStorage.setItem(CLOUD_ID_KEY, row.id);
-          shareLinkInput.value = location.href;
-          saveStatus.textContent = 'Shared list loaded';
-        } else {
-          saveStatus.textContent = 'No shared list found';
-        }
-        render();
-        setTimeout(()=>saveStatus.textContent='',1200);
-        return;
-      }
-
-      // otherwise load local
-      loadLocal();
-      render();
-      // if there is already cloud id in localStorage we can show share link
-      const cid = localStorage.getItem(CLOUD_ID_KEY);
-      if(cid) shareLinkInput.value = `${location.origin}${location.pathname}?share=${cid}`;
-    })();
-
-    /************ UI posts: schedule autosave after any change ************/
-    // Already done inside addItem, changeAmount, removeSelected, undoRemove
-
-    /************ small UX: press Enter to add ************/
-    objectInput.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter'){ addBtn.click(); }
-    });
-
-    /************ debug logs to console (optional) ************/
-    // console.log('Inventory loaded. _inventory available for debug');
-
-  </script>
+function setStatus(t){ $status.textContent = t || ''; }
+</script>
 </body>
 </html>
