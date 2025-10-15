@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple inventory</title>
+  <title>Simple inventory (Supabase)</title>
   <style>
     :root{
       --card-bg: #fff;
@@ -82,20 +82,26 @@
     }
     .amt-value { min-width:36px; text-align:center; padding:6px 4px; display:inline-block; }
 
-    .actions{ display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; }
+    .actions{ display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; align-items:center; }
     .small { padding:8px 10px; font-size:14px; }
+
+    #shareLink { padding:8px; border-radius:8px; border:1px solid #e6e9ee; min-width:260px; }
+    #copyShare { padding:8px 10px; border-radius:8px; border:0; background:#2563eb; color:white; cursor:pointer; }
 
     @media (max-width:640px){
       .form-top, .form-row, .controls { flex-direction:column; align-items:stretch; gap:8px; }
       .btn-add{ align-self:flex-end; }
       input[type="number"]{ width:100%; }
+      #shareLink { width:100%; }
     }
+
+    .status { color:#334155; font-size:13px; margin-left:8px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Simple inventory</h1>
-    <p class="lead">Lägg till objekt, markera för att ta bort och exportera som CSV vid behov. Data sparas lokalt i din webbläsare.</p>
+    <p class="lead">Add items, mark to remove, and export CSV. Use "Save cloud" to create a shareable link.</p>
 
     <div class="card" id="inventory-root">
       <div id="rowInfo"></div>
@@ -103,7 +109,7 @@
       <div class="form-top">
         <div class="field" style="flex:1;min-width:160px">
           <label for="objectInput">Object</label>
-          <input id="objectInput" type="text" placeholder="Ex: Ventil ABC-123" />
+          <input id="objectInput" type="text" placeholder="Ex: Valve ABC-123" />
         </div>
 
         <div class="field" style="width:170px">
@@ -133,7 +139,7 @@
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="5" style="color:#94a3b8;padding:18px;">Inga poster ännu</td></tr>
+            <tr><td colspan="5" style="color:#94a3b8;padding:18px;">No entries yet</td></tr>
           </tbody>
         </table>
       </div>
@@ -142,13 +148,24 @@
         <button id="removeBtn" class="btn btn-remove small">Remove selected</button>
         <button id="undoBtn" class="btn btn-undo small">Undo remove</button>
         <button id="exportBtn" class="btn btn-ghost small">Export CSV</button>
+
+        <button id="saveCloudBtn" class="btn btn-ghost small">Save cloud</button>
+        <input id="shareLink" readonly placeholder="Share link will appear here after Save" />
+        <button id="copyShare" title="Copy link">Copy</button>
+
+        <span id="saveStatus" class="status"></span>
       </div>
 
-      <p id="tableDesc" style="color:var(--muted); margin-top:12px;">Tips: om du vill dela listan mellan kollegor, nästa steg är att lägga upp filen på en HTTPS-host och ev. lägga till en liten serverless-endpoint.</p>
     </div>
   </div>
 
   <script>
+    // --------- SUPABASE CONFIG: replace with your values ----------
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
+    // -------------------------------------------------------------
+
+    // DOM
     const objectInput = document.getElementById('objectInput');
     const dateInput = document.getElementById('dateInput');
     const amountInput = document.getElementById('amountInput');
@@ -160,12 +177,18 @@
     const selectAll = document.getElementById('selectAll');
     const rowInfo = document.getElementById('rowInfo');
 
+    const saveCloudBtn = document.getElementById('saveCloudBtn');
+    const shareLinkInput = document.getElementById('shareLink');
+    const copyShareBtn = document.getElementById('copyShare');
+    const saveStatus = document.getElementById('saveStatus');
+
+    // state
     let items = [];               // { id, object, amount, addedDate, addedAt }
     let lastRemoved = [];
     const STORAGE_KEY = 'inventory_items_v1';
     const STORAGE_ROW_KEY = 'inventory_current_row';
 
-    (function setDefaultDate(){
+    ;(function setDefaultDate(){
       const d = new Date();
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -174,7 +197,6 @@
     })();
 
     function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-
     function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
     function load(){ const raw = localStorage.getItem(STORAGE_KEY); items = raw ? JSON.parse(raw) : []; }
 
@@ -182,7 +204,7 @@
       tbody.innerHTML = '';
       if(!items.length){
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="5" style="color:#94a3b8;padding:18px;">Inga poster ännu</td>';
+        tr.innerHTML = '<td colspan="5" style="color:#94a3b8;padding:18px;">No entries yet</td>';
         tbody.appendChild(tr);
         return;
       }
@@ -194,9 +216,9 @@
           <td>${escapeHtml(item.object)}</td>
           <td>
             <div class="amount-controls" data-id="${item.id}">
-              <button class="amt-btn btn-decr" aria-label="Minska" data-id="${item.id}">−</button>
+              <button class="amt-btn btn-decr" aria-label="Decrease" data-id="${item.id}">−</button>
               <span class="amt-value" data-id="${item.id}">${item.amount}</span>
-              <button class="amt-btn btn-incr" aria-label="Öka" data-id="${item.id}">+</button>
+              <button class="amt-btn btn-incr" aria-label="Increase" data-id="${item.id}">+</button>
             </div>
           </td>
           <td>${escapeHtml(item.addedDate)}</td>
@@ -223,12 +245,20 @@
       items.unshift(item);
       save();
       render();
-      postToParent('itemAdded', { item });
+      // fire a postMessage event for parent if embedded
+      try{ window.parent.postMessage({ type:'itemAdded', payload:{ item } }, '*'); }catch(e){}
     }
 
     window.addItemFromCode = function(payload){
       addItem(payload.object || payload.name || 'item', payload.addedDate || payload.date, payload.amount || payload.qty || 1);
     };
+
+    addBtn.addEventListener('click', () => {
+      addItem(objectInput.value, dateInput.value, Number(amountInput.value || 1));
+      objectInput.value = '';
+      amountInput.value = 1;
+      objectInput.focus();
+    });
 
     function removeSelected(){
       const checks = Array.from(document.querySelectorAll('.row-check:checked'));
@@ -238,8 +268,8 @@
       items = items.filter(it => !ids.includes(it.id));
       save();
       render();
-      postToParent('itemsRemoved', { removedIds: ids, removedItems: lastRemoved });
       selectAll.checked = false;
+      try{ window.parent.postMessage({ type:'itemsRemoved', payload:{ removedIds: ids } }, '*'); }catch(e){}
     }
 
     function undoRemove(){
@@ -248,12 +278,12 @@
       lastRemoved = [];
       save();
       render();
-      postToParent('undoRemove', {});
+      try{ window.parent.postMessage({ type:'undoRemove', payload: {} }, '*'); }catch(e){}
     }
 
     function exportCSV(){
       if(!items.length) {
-        alert('Inga poster att exportera');
+        alert('No items to export');
         return;
       }
       const lines = [];
@@ -278,17 +308,6 @@
       URL.revokeObjectURL(url);
     }
 
-    function postToParent(type, payload){
-      try{ window.parent.postMessage({ type, payload }, '*'); }catch(e){}
-    }
-
-    addBtn.addEventListener('click', () => {
-      addItem(objectInput.value, dateInput.value, Number(amountInput.value || 1));
-      objectInput.value = '';
-      amountInput.value = 1;
-      objectInput.focus();
-    });
-
     removeBtn.addEventListener('click', removeSelected);
     undoBtn.addEventListener('click', undoRemove);
     exportBtn.addEventListener('click', exportCSV);
@@ -306,7 +325,6 @@
       }
     });
 
-    // Delegate clicks for + / - buttons
     document.addEventListener('click', (ev) => {
       const t = ev.target;
       if(t.matches('.btn-incr')){
@@ -324,53 +342,135 @@
       items[idx].amount = Math.max(1, Number(items[idx].amount) + delta);
       save();
       render();
-      postToParent('amountChanged', { id: id, amount: items[idx].amount });
+      try{ window.parent.postMessage({ type:'amountChanged', payload:{ id, amount: items[idx].amount } }, '*'); }catch(e){}
     }
 
-    // postMessage listener
-    const ALLOWED_ORIGINS = [];
-    window.addEventListener('message', (ev) => {
-      // Optionally restrict by origin
-      // if(ALLOWED_ORIGINS.length && !ALLOWED_ORIGINS.includes(ev.origin)) return;
-      const data = ev.data || {};
-      const t = data.type;
-      if(t === 'init'){
-        const row = data.payload && data.payload.row;
-        if(row){
-          localStorage.setItem(STORAGE_ROW_KEY, row);
-          showRow(row);
+    // ---------------- Supabase save/load ----------------
+    async function saveToCloud(){
+      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        alert('Supabase credentials missing. Please configure SUPABASE_URL and SUPABASE_ANON_KEY.');
+        return;
+      }
+      saveStatus.textContent = 'Saving...';
+      saveCloudBtn.disabled = true;
+      try {
+        const payload = {
+          row: localStorage.getItem(STORAGE_ROW_KEY) || null,
+          items: items
+        };
+
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/lists`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if(!res.ok){
+          const txt = await res.text();
+          throw new Error('Save failed: ' + res.status + ' ' + txt);
         }
-      } else if(t === 'addItem'){
-        const payload = data.payload || {};
-        window.addItemFromCode(payload);
-      } else if(t === 'ping'){
-        postToParent('pong', { ts: Date.now() });
+        const data = await res.json();
+        const id = data && data[0] && data[0].id;
+        if(!id) throw new Error('No id returned');
+        const url = `${location.origin}${location.pathname}?share=${id}`;
+        shareLinkInput.value = url;
+        saveStatus.textContent = 'Saved';
+        return id;
+      } catch(err){
+        console.error(err);
+        alert('Could not save to cloud: ' + err.message);
+        saveStatus.textContent = 'Save failed';
+      } finally {
+        saveCloudBtn.disabled = false;
+      }
+    }
+
+    async function loadFromCloudById(id){
+      if(!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        console.error('Supabase credentials missing');
+        return null;
+      }
+      try {
+        const q = `?id=eq.${id}`;
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/lists${q}`, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if(!res.ok) throw new Error('Load failed: ' + res.status);
+        const data = await res.json();
+        if(!data || !data.length) return null;
+        return data[0];
+      } catch(err){
+        console.error(err);
+        alert('Could not load from cloud: ' + err.message);
+        return null;
+      }
+    }
+
+    saveCloudBtn.addEventListener('click', async () => {
+      const id = await saveToCloud();
+      if(id) {
+        shareLinkInput.select();
       }
     });
 
-    function showRow(row){ rowInfo.textContent = 'Row: ' + row; }
+    copyShareBtn.addEventListener('click', () => {
+      if(!shareLinkInput.value) return;
+      navigator.clipboard.writeText(shareLinkInput.value).then(() => {
+        saveStatus.textContent = 'Link copied';
+        setTimeout(()=> saveStatus.textContent = '', 1500);
+      });
+    });
 
-    (function prefillFromQuery(){
+    // on load: check ?share=ID and auto-load
+    (async function checkShareParamOnLoad(){
       try{
         const params = new URLSearchParams(location.search);
-        const row = params.get('row');
+        const share = params.get('share');
         const saved = localStorage.getItem(STORAGE_ROW_KEY);
-        if(row){
-          localStorage.setItem(STORAGE_ROW_KEY, row);
-          showRow(row);
+        if(share){
+          saveStatus.textContent = 'Loading shared list...';
+          const rowObj = await loadFromCloudById(share);
+          if(rowObj && rowObj.items){
+            items = rowObj.items;
+            save();
+            render();
+            shareLinkInput.value = location.href;
+            saveStatus.textContent = 'Loaded shared list';
+          } else {
+            saveStatus.textContent = 'No shared list found';
+          }
         } else if(saved){
-          showRow(saved);
+          // if no share param: load from local storage
+          load();
+          render();
         }
-      }catch(e){}
+      }catch(e){
+        console.error(e);
+      } finally {
+        setTimeout(()=> saveStatus.textContent = '', 1500);
+      }
     })();
 
-    load();
-    render();
-
+    // expose helper for embedding parent pages
     window.__inventory = {
       addItemFromCode: window.addItemFromCode,
       items: () => items.slice()
     };
+
+    // initial load if not from cloud
+    if(!location.search.includes('share=')){
+      load();
+      render();
+    }
   </script>
 </body>
 </html>
