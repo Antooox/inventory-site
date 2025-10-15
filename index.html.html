@@ -22,7 +22,7 @@
       border:1px solid #e6edf1;border-radius:8px;padding:10px 12px;font-size:15px;background:#fff;outline:none;
       box-sizing:border-box;
     }
-    select{height:44px;min-width:150px;}
+    select{height:44px;}
     .controls{display:flex;gap:12px;align-items:center;margin-top:8px;}
     .btn{background:var(--accent);color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;}
     .btn.ghost{background:transparent;color:var(--accent);border:1px solid #d6e7e2;}
@@ -31,7 +31,7 @@
     .table th, .table td{padding:12px 8px;border-bottom:1px solid #eef2f4;text-align:left;vertical-align:middle;}
     .table th{font-weight:700;color:#333;}
     .amountBox{display:flex;align-items:center;gap:8px}
-    .smallBtn{border:1px solid #d6e6e4;background:#fff;padding:6px 8px;border-radius:6px;cursor:pointer; min-width:34px; text-align:center;}
+    .smallBtn{border:1px solid #d6e6e4;background:#fff;padding:6px 8px;border-radius:6px;cursor:pointer;}
     .smallBtn:active{transform:translateY(1px)}
     .checkbox{width:18px;height:18px}
     .muted{color:var(--muted);font-size:13px}
@@ -57,7 +57,7 @@
       <div class="row" style="margin-top:14px">
         <div style="flex:1">
           <label for="rowSelect">Select row</label>
-          <select id="rowSelect" aria-label="Select warehouse row"></select>
+          <select id="rowSelect"></select>
         </div>
       </div>
 
@@ -89,7 +89,7 @@
           <tr>
             <th style="width:36px"></th>
             <th>Object</th>
-            <th style="width:140px">Amount</th>
+            <th style="width:120px">Amount</th>
             <th style="width:120px">Added date</th>
             <th style="width:160px">Added at</th>
           </tr>
@@ -114,11 +114,12 @@
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
   <script>
-    // ------------ CONFIG (embedded keys as requested) -------------
+    // ------------ CONFIG (you asked to embed keys) -------------
     const SUPABASE_URL = "https://xlgjmznrifbshgcrzjyi.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY";
-    // ---------------------------------------------------------------
+    // -----------------------------------------------------------
 
+    // create client
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // UI refs
@@ -133,48 +134,91 @@
     const undoBtn = document.getElementById('undoBtn');
     const exportBtn = document.getElementById('exportBtn');
 
-    // local constants & state
-    const ROW_COUNT = 20;
-    const ROWS = Array.from({length: ROW_COUNT}, (_,i) => `ROW${i+1}`); // ROW1..ROW20
-    let currentRow = ROWS[0];
+    let currentRow = null;
     let currentItems = []; // array of items
     let undoStack = [];
-    let pollInterval = null;
 
-    function setStatus(t){ statusText.textContent = `Status: ${t}`; }
-
+    // helper uuid
     function uuid(){
       return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,9);
     }
 
-    // fill the row dropdown locally (no server call)
-    function populateRowSelect(){
-      rowSelect.innerHTML = '';
-      ROWS.forEach(r => {
-        const opt = document.createElement('option');
-        opt.value = r; opt.textContent = r;
-        rowSelect.appendChild(opt);
-      });
-      rowSelect.value = currentRow;
+    function setStatus(t){
+      statusText.textContent = t;
     }
 
-    async function ensureRowExistsOnServer(row){
-      // we attempt upsert/create a row with empty items if not exists
-      try {
-        await supabase
+    // populate dropdown immediately with ROW1..ROW20 so user always sees options
+    function populateDefaultSelect(){
+      rowSelect.innerHTML = '';
+      for(let i=1;i<=20;i++){
+        const v = `ROW${i}`;
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        rowSelect.appendChild(opt);
+      }
+      // pick first if nothing selected
+      if(!currentRow){
+        currentRow = rowSelect.options[0].value;
+        rowSelect.value = currentRow;
+      }
+    }
+
+    // try to fetch rows from DB; if none, upsert defaults (safe)
+    async function ensureRowsInDb(){
+      try{
+        setStatus('Syncing rows with server…');
+        // read any rows
+        const { data, error } = await supabase
           .from('lists')
-          .upsert([{ row: row, items: [] }], { onConflict: 'row' });
-        return true;
-      } catch(err){
-        console.error('ensureRowExists', err);
-        return false;
+          .select('row')
+          .order('row', { ascending: true })
+          .limit(100);
+
+        if(error){
+          console.warn('ensureRowsInDb: select error', error);
+          setStatus('Could not read rows from server (continuing with local list)');
+          return;
+        }
+
+        if(Array.isArray(data) && data.length > 0){
+          // use server list to populate select (but keep default options as fallback)
+          rowSelect.innerHTML = '';
+          data.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.row;
+            opt.textContent = r.row;
+            rowSelect.appendChild(opt);
+          });
+          // keep currentRow if possible otherwise pick first
+          if(!currentRow || ![...rowSelect.options].some(o=>o.value===currentRow)){
+            currentRow = rowSelect.options[0].value;
+          }
+          rowSelect.value = currentRow;
+          setStatus('Rows loaded from server');
+        } else {
+          // server empty — insert default rows (upsert so safe)
+          const defaultRows = Array.from({length:20}, (_,i) => ({row:`ROW${i+1}`}));
+          const { error: upsertErr } = await supabase
+            .from('lists')
+            .upsert(defaultRows, { onConflict: 'row' });
+          if(upsertErr){
+            console.warn('ensureRowsInDb: upsert error', upsertErr);
+            setStatus('Could not create default rows on server (continuing locally)');
+            return;
+          }
+          // after upsert, we can keep local dropdown (already populated) and continue
+          setStatus('Default rows ensured (server)');
+        }
+      }catch(err){
+        console.error('ensureRowsInDb', err);
+        setStatus('Error syncing rows (continuing locally)');
       }
     }
 
     async function fetchItemsForCurrentRow(){
       if(!currentRow) return;
-      setStatus('Loading list...');
-      try {
+      setStatus('Loading items…');
+      try{
         const { data, error } = await supabase
           .from('lists')
           .select('items')
@@ -182,31 +226,17 @@
           .maybeSingle();
 
         if(error){
-          console.error('fetchItems error', error);
-          // try create the row empty then refetch
-          await ensureRowExistsOnServer(currentRow);
-          const second = await supabase.from('lists').select('items').eq('row', currentRow).maybeSingle();
-          currentItems = (second.data && second.data.items) ? second.data.items : [];
-          renderItems();
-          setStatus('Loaded (created missing row).');
+          console.error('fetchItemsForCurrentRow error', error);
+          setStatus('Error loading items');
           return;
         }
-
-        if(!data){
-          // not found -> create
-          await ensureRowExistsOnServer(currentRow);
-          currentItems = [];
-          renderItems();
-          setStatus('Loaded (created new row).');
-          return;
-        }
-
-        currentItems = data.items || [];
+        // maybeSingle returns null if none
+        currentItems = (data && data.items) ? data.items : [];
         renderItems();
         setStatus('List updated from cloud (remote changes).');
-      } catch(e){
+      }catch(e){
         console.error(e);
-        setStatus('Error loading list');
+        setStatus('Error fetching items');
       }
     }
 
@@ -272,25 +302,27 @@
       });
     }
 
+    // Upsert to ensure the row exists and items are set atomically
     async function saveItemsToServer(newItems, showStatus=true){
       if(!currentRow) return false;
-      if(showStatus) setStatus('Saving...');
-      try {
-        // upsert by row (create or update)
-        const { error } = await supabase
+      if(showStatus) setStatus('Saving…');
+      try{
+        const payload = { row: currentRow, items: newItems };
+        const { data, error } = await supabase
           .from('lists')
-          .upsert([{ row: currentRow, items: newItems }], { onConflict: 'row' });
+          .upsert([payload], { onConflict: 'row' }); // will insert or update by row
 
         if(error){
-          console.error('save error', error);
+          console.error('saveItemsToServer upsert error', error);
           setStatus('Save failed');
           return false;
         }
-        currentItems = newItems;
+        // success
         if(showStatus) setStatus('Saved');
+        currentItems = newItems;
         return true;
-      } catch(err){
-        console.error(err);
+      }catch(e){
+        console.error('saveItemsToServer', e);
         setStatus('Save failed');
         return false;
       }
@@ -314,7 +346,6 @@
       const newItems = [...currentItems, item];
       const ok = await saveItemsToServer(newItems);
       if(ok){
-        // clear inputs
         objInput.value = '';
         amountInput.value = '1';
         undoStack.push({action:'add', item});
@@ -329,7 +360,7 @@
       let newAmount = old + delta;
       if(newAmount < 0) newAmount = 0;
       currentItems[idx].amount = newAmount;
-      const ok = await saveItemsToServer([...currentItems], true);
+      const ok = await saveItemsToServer([...currentItems]);
       if(ok){
         undoStack.push({action:'change', id, from: old, to: newAmount});
         renderItems();
@@ -385,18 +416,19 @@
       a.remove(); URL.revokeObjectURL(url);
     }
 
+    // Polling refresher
+    let pollInterval = null;
     function startPolling(){
       if(pollInterval) clearInterval(pollInterval);
       pollInterval = setInterval(() => {
         fetchItemsForCurrentRow().catch(()=>{});
-      }, 4000);
+      }, 3500);
     }
 
     // event listeners
     addBtn.addEventListener('click', addItem);
     rowSelect.addEventListener('change', async (e) => {
       currentRow = e.target.value;
-      await ensureRowExistsOnServer(currentRow);
       await fetchItemsForCurrentRow();
     });
     removeBtn.addEventListener('click', removeSelected);
@@ -407,11 +439,25 @@
     (async function init(){
       dateInput.value = new Date().toISOString().slice(0,10);
       setStatus('Initializing…');
-      populateRowSelect();
-      // ensure default row exists on server and fetch its items
-      await ensureRowExistsOnServer(currentRow);
+
+      // 1) show default rows right away so dropdown is usable even before server responses
+      populateDefaultSelect();
+
+      // 2) try to ensure rows exist on server and if server has rows prefer those
+      await ensureRowsInDb();
+
+      // 3) set currentRow (respect previously selected)
+      if(!currentRow && rowSelect.options.length>0){
+        currentRow = rowSelect.options[0].value;
+        rowSelect.value = currentRow;
+      }
+
+      // 4) fetch items for chosen row
       await fetchItemsForCurrentRow();
+
+      // 5) start polling remote for updates
       startPolling();
+
       setStatus('Ready');
     })();
   </script>
