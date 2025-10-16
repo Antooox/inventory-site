@@ -12,10 +12,8 @@
       --card:#ffffff; --muted:#667272; --text:#0e1f1e;
       --border:#e5eeec; --border-strong:#d9e6e3;
       --primary:#0f8f83; --primary-600:#0c6f67; --primary-weak:#e8f2f1;
-      --danger:#b02a2a; --danger-weak:#fdecec;
-      --ok:#107a65; --ok-bg:#e9fbf6;
-      --radius:16px;
-      --shadow:0 12px 36px rgba(16,24,40,.08), 0 1px 8px rgba(16,24,40,.06);
+      --danger:#b02a2a; --ok:#107a65; --ok-bg:#e9fbf6;
+      --radius:16px; --shadow:0 12px 36px rgba(16,24,40,.08), 0 1px 8px rgba(16,24,40,.06);
       --shadow-sm:0 6px 18px rgba(16,24,40,.06), 0 1px 4px rgba(16,24,40,.05);
       --stripe:#fbfdfc;
     }
@@ -37,7 +35,6 @@
       width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;font:inherit;transition:border-color .15s,box-shadow .15s}
     input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgb(15 143 131 / 12%)}
 
-    /* Inputs grid */
     .row-grid{display:grid;gap:14px;grid-template-columns:minmax(240px,1fr) 160px 120px 140px}
     @media (max-width:980px){.row-grid{grid-template-columns:1fr 1fr}}
     @media (max-width:560px){.row-grid{grid-template-columns:1fr}}
@@ -51,7 +48,7 @@
     .btn.secondary:hover{filter:brightness(.96)}
     .btn.link{background:transparent;border:1px solid var(--border);color:#0a5e56}
     .btn.link:hover{background:#f2fbfa}
-    .btn.danger{background:#f6e8e8;color:var(--danger)}
+    .btn.danger{background:#f6e8e8;color:#b02a2a}
     .btn.danger:hover{filter:brightness(.98)}
     .actions-top{display:flex;justify-content:space-between;gap:12px;margin-top:12px}
     .actions-row{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
@@ -72,9 +69,6 @@
     @media (max-width:620px){.col-added-at{display:none}}
     @media (max-width:520px){.col-added-date{display:none}}
 
-    tr.low{background:var(--danger-weak)!important}
-    tr.low .qty-value{color:var(--danger);font-weight:800}
-
     .amount-cell{display:flex;align-items:center;gap:10px}
     .qty-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer}
     .qty-btn:hover{border-color:#cfe4e0;background:#f6fcfb}
@@ -83,14 +77,14 @@
 
     .status{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--muted);padding:8px 10px;border:1px solid var(--border);border-radius:999px;background:#fff}
     .status.ok{color:var(--ok);background:var(--ok-bg);border-color:#c6efe6}
-    .status.err{color:var(--danger);background:var(--danger-weak);border-color:#f5cccc}
+    .status.err{color:#b02a2a;background:#fdecec;border-color:#f5cccc}
 
     /* login */
     .center{min-height:60vh;display:flex;align-items:center;justify-content:center;padding:24px}
     .login-card{max-width:460px;width:100%}
     .login-title{font-size:28px;font-weight:800;margin:0 0 6px}
     .login-sub{color:var(--muted);margin:0 0 18px}
-    .error{color:var(--danger);background:var(--danger-weak);border:1px solid #f5cccc;border-radius:10px;padding:10px;margin-top:10px;display:none}
+    .error{color:#b02a2a;background:#fdecec;border:1px solid #f5cccc;border-radius:10px;padding:10px;margin-top:10px;display:none}
     .login-brand{display:flex;align-items:center;gap:14px;margin-bottom:12px}
     .login-logo-wrap{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6));border:1px solid var(--border);box-shadow:var(--shadow-sm);backdrop-filter:blur(6px);overflow:hidden}
     .login-logo{max-width:100%;max-height:100%;object-fit:contain;transform:translateY(1px)}
@@ -173,7 +167,7 @@
         <select id="rowSelect" aria-label="Row"></select>
       </div>
 
-      <!-- Inputs: Object | Date | Amount | Space % -->
+      <!-- Inputs: Object | Date | Amount | Space % (per unit) -->
       <div class="row-grid" style="margin-top:12px">
         <div>
           <label for="itemObject">Object</label>
@@ -188,8 +182,9 @@
           <input id="itemAmount" type="number" min="1" step="1" value="1"/>
         </div>
         <div>
-          <label for="itemSpace">Space %</label>
-          <input id="itemSpace" type="number" min="1" max="100" step="1" value="10" title="How large space this line takes of the row (1–100%)"/>
+          <label for="itemSpace">Space % (per unit)</label>
+          <input id="itemSpace" type="number" min="1" max="100" step="1" value="10"
+                 title="How large space a single unit takes of the row (1–100%)"/>
         </div>
       </div>
 
@@ -213,7 +208,7 @@
               <th class="col-added-at" style="width:230px;">Added at</th>
             </tr>
           </thead>
-          <tbody id="itemsBody"></tbody>
+            <tbody id="itemsBody"></tbody>
         </table>
       </div>
 
@@ -256,7 +251,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /******** AUTH (client gate) ********/
+    /******** AUTH ********/
     const FIXED_USER = 'stegra-logistics';
     const FIXED_PASS_SHA256 = 'b2320acb7841b387c0ad4c23bb5c41d559fe8d1192816f2c54fad279e8a8a3e6'; // "Stegra123"
 
@@ -268,15 +263,8 @@
     const loginErr  = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    function setAuthedUI(isAuthed){
-      loginView.style.display = isAuthed ? 'none' : '';
-      appView.style.display   = isAuthed ? '' : 'none';
-    }
-    async function sha256Hex(str){
-      const enc = new TextEncoder().encode(str);
-      const buf = await crypto.subtle.digest('SHA-256', enc);
-      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    }
+    function setAuthedUI(isAuthed){ loginView.style.display = isAuthed ? 'none' : ''; appView.style.display = isAuthed ? '' : 'none'; }
+    async function sha256Hex(str){ const enc=new TextEncoder().encode(str); const buf=await crypto.subtle.digest('SHA-256',enc); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
     async function doLogin(){
       loginErr.style.display='none';
       const u=(loginUser.value||'').trim().toLowerCase();
@@ -284,77 +272,54 @@
       if(u===FIXED_USER && pHash===FIXED_PASS_SHA256){
         localStorage.setItem('inv_auth',JSON.stringify({u,t:Date.now()}));
         requestAnimationFrame(()=>{ setAuthedUI(true); startApp(); });
-      }else{
-        loginErr.style.display='block';
-      }
+      }else loginErr.style.display='block';
     }
-    function doLogout(){
-      localStorage.removeItem('inv_auth');
-      setAuthedUI(false);
-      loginUser.value=''; loginPass.value='';
-      teardownApp();
-    }
+    function doLogout(){ localStorage.removeItem('inv_auth'); setAuthedUI(false); loginUser.value=''; loginPass.value=''; teardownApp(); }
     loginBtn.addEventListener('click',doLogin);
     loginPass.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doLogin(); }});
     logoutBtn.addEventListener('click',doLogout);
-
-    window.addEventListener('DOMContentLoaded',()=>{
-      try{
-        const s=JSON.parse(localStorage.getItem('inv_auth')||'{}');
-        if(s.u===FIXED_USER){ setAuthedUI(true); startApp(); return; }
-      }catch{}
-      setAuthedUI(false);
-    });
+    window.addEventListener('DOMContentLoaded',()=>{ try{ const s=JSON.parse(localStorage.getItem('inv_auth')||'{}'); if(s.u===FIXED_USER){ setAuthedUI(true); startApp(); return; } }catch{} setAuthedUI(false); });
 
     /******** APP ********/
-    const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-    const TABLE='inventory_items', LOW_STOCK_THRESHOLD=10;
+    const SUPABASE_URL='https://xlgjmznrifbshgcrzjyi.supabase.co';
+    const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
+    const TABLE='inventory_items';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-    const rowsList = Array.from({length:20},(_,i)=>`ROW${i+1}`);
-    let currentRow = localStorage.getItem('inv_row') || 'ROW1';
-    let currentItems = [];
-    let wired = false; // event-guard
-    let dashMode = 'capacity'; // 'capacity' | 'amount'
+    const rowsList=Array.from({length:20},(_,i)=>`ROW${i+1}`);
+    let currentRow=localStorage.getItem('inv_row')||'ROW1';
+    let currentItems=[]; let wired=false; let dashMode='capacity';
 
-    // DOM refs
-    const rowSelect  = document.getElementById('rowSelect');
-    const itemObject = document.getElementById('itemObject');
-    const itemAmount = document.getElementById('itemAmount');
-    const itemDate   = document.getElementById('itemDate');
-    const itemSpace  = document.getElementById('itemSpace');
-    const addBtn     = document.getElementById('addBtn');
-    const itemsBody  = document.getElementById('itemsBody');
-    const checkAll   = document.getElementById('checkAll');
-    const removeBtn  = document.getElementById('removeSelectedBtn');
-    const exportBtn  = document.getElementById('exportCsvBtn');
-    const statusEl   = document.getElementById('status');
+    // DOM
+    const rowSelect=document.getElementById('rowSelect');
+    const itemObject=document.getElementById('itemObject');
+    const itemAmount=document.getElementById('itemAmount');
+    const itemDate=document.getElementById('itemDate');
+    const itemSpace=document.getElementById('itemSpace');
+    const addBtn=document.getElementById('addBtn');
+    const itemsBody=document.getElementById('itemsBody');
+    const checkAll=document.getElementById('checkAll');
+    const removeBtn=document.getElementById('removeSelectedBtn');
+    const exportBtn=document.getElementById('exportCsvBtn');
+    const statusEl=document.getElementById('status');
 
-    const dashBackdrop = document.getElementById('dashBackdrop');
-    const dashClose    = document.getElementById('dashClose');
-    const dashRefresh  = document.getElementById('dashRefresh');
-    const dashDownload = document.getElementById('dashDownload');
-    const dashSummary  = document.getElementById('dashSummary');
-    const dashCanvas   = document.getElementById('dashCanvas');
-    const modeCapacityBtn = document.getElementById('modeCapacity');
-    const modeAmountBtn   = document.getElementById('modeAmount');
+    const dashBackdrop=document.getElementById('dashBackdrop');
+    const dashClose=document.getElementById('dashClose');
+    const dashRefresh=document.getElementById('dashRefresh');
+    const dashDownload=document.getElementById('dashDownload');
+    const dashSummary=document.getElementById('dashSummary');
+    const dashCanvas=document.getElementById('dashCanvas');
+    const modeCapacityBtn=document.getElementById('modeCapacity');
+    const modeAmountBtn=document.getElementById('modeAmount');
 
-    const setStatus=(s,type='neutral')=>{
-      statusEl.textContent=`Status: ${s}`;
-      statusEl.classList.remove('ok','err');
-      if(type==='ok') statusEl.classList.add('ok');
-      if(type==='err') statusEl.classList.add('err');
-    };
+    const setStatus=(s,type='neutral')=>{ statusEl.textContent=`Status: ${s}`; statusEl.classList.remove('ok','err'); if(type==='ok') statusEl.classList.add('ok'); if(type==='err') statusEl.classList.add('err'); };
     const todayStr=()=>new Date().toISOString().slice(0,10);
 
     function renderItems(){
       itemsBody.innerHTML='';
       currentItems.forEach(it=>{
         const tr=document.createElement('tr');
-        const low=Number(it.amount||0)<LOW_STOCK_THRESHOLD;
-        if(low) tr.classList.add('low');
 
         const tdC=document.createElement('td');
         const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.id=it.id; tdC.appendChild(cb);
@@ -369,7 +334,10 @@
         tdAmt.append(dec,val,inc);
 
         const tdSpace=document.createElement('td');
-        tdSpace.textContent = (it.space_pct!=null && !Number.isNaN(Number(it.space_pct))) ? (Number(it.space_pct)+'%') : '';
+        // visa total space = per unit * amount
+        const perUnit=Number(it.space_pct||0);
+        const totalSpace = Number(it.amount||0) * (Number.isFinite(perUnit)? perUnit : 0);
+        tdSpace.textContent = Number.isFinite(totalSpace) && totalSpace>0 ? `${totalSpace}%` : '';
 
         const tdDate=document.createElement('td'); tdDate.className='col-added-date'; tdDate.textContent=it.added_date||'';
         const tdAt=document.createElement('td'); tdAt.className='col-added-at'; tdAt.textContent=it.added_at?new Date(it.added_at).toLocaleString():'';
@@ -390,10 +358,7 @@
         currentItems=Array.isArray(data)?data:[];
         renderItems();
         setStatus('ready','ok');
-      }catch(err){
-        console.error('loadForRow error',err);
-        setStatus(`error loading: ${err.message}`,'err');
-      }
+      }catch(err){ console.error('loadForRow error',err); setStatus(`error loading: ${err.message}`,'err'); }
     }
 
     async function addItem(){
@@ -401,19 +366,9 @@
       if(!obj){ alert('Enter an object name'); return; }
       const dateVal=itemDate.value||todayStr();
       const amountVal=Math.max(1,Number(itemAmount.value)||1);
-      let spaceVal = Number(itemSpace.value);
-      if(!Number.isFinite(spaceVal) || spaceVal<1) spaceVal=1;
-      if(spaceVal>100) spaceVal=100;
+      let spaceVal=Number(itemSpace.value); if(!Number.isFinite(spaceVal)||spaceVal<1) spaceVal=1; if(spaceVal>100) spaceVal=100;
 
-      const newItem={
-        id:(crypto?.randomUUID?.()||String(Date.now())),
-        row:currentRow,
-        object:obj,
-        amount:amountVal,
-        space_pct:spaceVal,
-        added_date:dateVal,
-        added_at:new Date().toISOString()
-      };
+      const newItem={ id:(crypto?.randomUUID?.()||String(Date.now())), row:currentRow, object:obj, amount:amountVal, space_pct:spaceVal, added_date:dateVal, added_at:new Date().toISOString() };
 
       try{
         setStatus('saving...');
@@ -532,33 +487,31 @@
     async function loadDashboard(){
       try{
         setStatus('loading dashboard...');
-        // Hämta minsta nödvändiga fält för valt läge
-        const fields = dashMode === 'capacity' ? 'row,space_pct' : 'row,amount';
+        const fields = dashMode==='capacity' ? 'row,amount,space_pct' : 'row,amount';
         const {data,error}=await supabase.from(TABLE).select(fields);
         if(error) throw error;
 
         const agg={}; for(const r of rowsList) agg[r]=0;
         for(const it of (data||[])){
-          const r=it.row||'UNKNOWN';
-          if(!(r in agg)) agg[r]=0;
+          const r=it.row||'UNKNOWN'; if(!(r in agg)) agg[r]=0;
           if(dashMode==='capacity'){
-            const pct = Number(it.space_pct||0);
-            if(Number.isFinite(pct)) agg[r]+=pct; // summera andelar
+            const perUnit = Number(it.space_pct||0);
+            const amt     = Number(it.amount||0);
+            const add     = (Number.isFinite(perUnit)&&Number.isFinite(amt)) ? perUnit*amt : 0;
+            agg[r]+=add;
           }else{
             agg[r]+=Number(it.amount||0);
           }
         }
-        dashData = Object.entries(agg).map(([row,val])=>({row,value:val}));
-        // sortera: capacity högst först (overflow räknas), amount högst först
-        dashData.sort((a,b)=>b.value-a.value);
+        dashData=Object.entries(agg).map(([row,value])=>({row,value})).sort((a,b)=>b.value-a.value);
 
         if(dashMode==='capacity'){
-          const over = dashData.filter(x=>x.value>100).length;
-          const avg  = (dashData.reduce((s,x)=>s+Math.min(100,x.value),0)/dashData.length)||0;
-          dashSummary.textContent = `Mode: Capacity • Avg fill: ${avg.toFixed(0)}% • Overflow rows: ${over}`;
+          const over=dashData.filter(x=>x.value>100).length;
+          const avg =(dashData.reduce((s,x)=>s+Math.min(100,x.value),0)/dashData.length)||0;
+          dashSummary.textContent=`Mode: Capacity • Avg fill: ${avg.toFixed(0)}% • Overflow rows: ${over}`;
         }else{
-          const total = dashData.reduce((s,x)=>s+x.value,0);
-          dashSummary.textContent = `Mode: Amount • Total amount across rows: ${total}`;
+          const total=dashData.reduce((s,x)=>s+x.value,0);
+          dashSummary.textContent=`Mode: Amount • Total amount across rows: ${total}`;
         }
 
         drawBar(); if(!_resize){ _resize=()=>drawBar(); window.addEventListener('resize',_resize); }
@@ -574,63 +527,77 @@
       cvs.style.width=w+'px'; cvs.style.height=h+'px'; cvs.width=Math.floor(w*dpr); cvs.height=Math.floor(h*dpr);
       ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h); ctx.font='13px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif';
 
-      const values = dashData.map(x=>x.value);
-      const maxRef = (dashMode==='capacity') ? 100 : Math.max(1, ...values);
-      const chartW = w - padL - padR;
+      const values=dashData.map(x=>x.value);
+      const maxRef=(dashMode==='capacity')?100:Math.max(1,...values);
+      const chartW=w-padL-padR;
 
-      // y-axis
       ctx.strokeStyle='#e5eeec'; ctx.beginPath(); ctx.moveTo(padL,padT-6); ctx.lineTo(padL,h-padB); ctx.stroke();
 
       dashData.forEach((d,i)=>{
         const y=padT+i*(barH+gap);
-        // label
         ctx.fillStyle='#3b4746'; ctx.textAlign='left'; ctx.fillText(d.row,12,y+barH-6);
-
-        // bar width
-        const ref = (dashMode==='capacity') ? Math.min(100, d.value) : d.value;
-        const bw = Math.round((ref / maxRef) * chartW);
-
-        // bar
-        ctx.fillStyle = '#0f8f83';
-        roundRect(ctx, padL, y, bw, barH, 6, true, false);
-
-        // value text
-        ctx.fillStyle='#0e1f1e';
-        const label = (dashMode==='capacity') ? `${Math.round(d.value)}%` : String(d.value);
-        ctx.fillText(label, padL + bw + 6, y + barH - 6);
+        const ref=(dashMode==='capacity')?Math.min(100,d.value):d.value;
+        const bw=Math.round((ref/maxRef)*chartW);
+        ctx.fillStyle='#0f8f83'; roundRect(ctx,padL,y,bw,barH,6,true,false);
+        ctx.fillStyle='#0e1f1e'; const label=(dashMode==='capacity')?`${Math.round(d.value)}%`:String(d.value);
+        ctx.fillText(label,padL+bw+6,y+barH-6);
       });
 
       function roundRect(ctx,x,y,w,h,r,fill,stroke){
         if(w<=0||h<=0) return; if(r>h/2) r=h/2; if(r>w/2) r=w/2;
         ctx.beginPath();
-        ctx.moveTo(x+r,y);
-        ctx.arcTo(x+w,y,x+w,y+h,r);
-        ctx.arcTo(x+w,y+h,x,y+h,r);
-        ctx.arcTo(x,y+h,x,y,r);
-        ctx.arcTo(x,y,x+w,y,r);
-        ctx.closePath();
-        if(fill) ctx.fill();
-        if(stroke) ctx.stroke();
+        ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r);
+        ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r);
+        ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke();
       }
     }
     function downloadChart(){ const a=document.createElement('a'); a.download=`inventory-dashboard-${dashMode}-${new Date().toISOString().slice(0,10)}.png`; a.href=dashCanvas.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); }
 
+    function wireEventsOnce(){
+      if(wired) return; wired=true;
+      addBtn.addEventListener('click',addItem);
+      removeBtn.addEventListener('click',removeSelected);
+      exportBtn.addEventListener('click',()=>exportCSV(currentItems));
+      checkAll.addEventListener('change',e=>{ itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=e.target.checked); });
+      itemsBody.addEventListener('click',e=>{
+        const btn=e.target.closest('.qty-btn'); if(btn){ updateAmount(btn.dataset.id, btn.dataset.action==='inc'?+1:-1); return; }
+        const span=e.target.closest('.obj-text'); if(span){
+          const id=span.dataset.id, old=span.textContent;
+          const inp=document.createElement('input'); inp.type='text'; inp.value=old; inp.className='obj-edit';
+          span.replaceWith(inp); inp.focus(); inp.select();
+          const revert=(txt)=>{ const s=document.createElement('span'); s.className='obj-text'; s.dataset.id=id; s.textContent=txt; inp.replaceWith(s); };
+          const save =()=>renameObject(id,inp.value,revert);
+          const cancel=()=>revert(old);
+          inp.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();save();} else if(ev.key==='Escape'){ev.preventDefault();cancel();} });
+          inp.addEventListener('blur',save);
+        }
+      });
+      rowSelect.addEventListener('change',async e=>{ currentRow=e.target.value; localStorage.setItem('inv_row',currentRow); checkAll.checked=false; await loadForRow(currentRow); });
+      document.getElementById('dashboardBtn').addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
+      dashClose.addEventListener('click',closeDashboard);
+      dashRefresh.addEventListener('click',loadDashboard);
+      dashDownload.addEventListener('click',downloadChart);
+      dashBackdrop.addEventListener('click',e=>{ if(e.target===dashBackdrop) closeDashboard(); });
+      modeCapacityBtn.addEventListener('click',()=>{ dashMode='capacity'; modeCapacityBtn.classList.add('active'); modeCapacityBtn.setAttribute('aria-selected','true'); modeAmountBtn.classList.remove('active'); modeAmountBtn.removeAttribute('aria-selected'); loadDashboard(); });
+      modeAmountBtn.addEventListener('click',()=>{ dashMode='amount'; modeAmountBtn.classList.add('active'); modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
+    }
+
+    function openDashboard(){ dashBackdrop.classList.add('show'); }
+    function closeDashboard(){ dashBackdrop.classList.remove('show'); if(_resize){window.removeEventListener('resize',_resize); _resize=null;} }
+    let dashData=[], _resize=null;
+
     function startApp(){
       try{
-        rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
+        rowSelect.innerHTML=rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
         if(!rowsList.includes(currentRow)) currentRow='ROW1';
         rowSelect.value=currentRow;
         itemDate.value=todayStr();
-        itemSpace.value = Math.min(100, Math.max(1, Number(itemSpace.value) || 10));
+        itemSpace.value=Math.min(100,Math.max(1,Number(itemSpace.value)||10));
         wireEventsOnce();
         loadForRow(currentRow);
-      }catch(err){
-        console.error('startApp error',err);
-        setStatus(`init error: ${err.message}`,'err');
-      }
+      }catch(err){ console.error('startApp error',err); setStatus(`init error: ${err.message}`,'err'); }
     }
     function teardownApp(){ wired=false; itemsBody.innerHTML=''; setStatus('ready'); }
-
   </script>
 </body>
 </html>
