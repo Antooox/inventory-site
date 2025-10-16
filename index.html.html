@@ -1,421 +1,289 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Shared inventory — ROW lists</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Shared inventory</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net"/>
   <style>
-    :root{--accent:#11998e;--danger:#e05252;--muted:#6c7a86}
-    body{font-family:Inter,system-ui,Arial;margin:24px;background:#f6f7f8;color:#222}
-    .card{background:#fff;border-radius:10px;padding:22px;max-width:980px;margin:0 auto;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
-    h1{margin:0 0 6px;font-size:26px}
-    p.muted{margin:0 0 14px;color:var(--muted)}
-    label{display:block;margin:8px 0 6px;font-weight:600}
-    input[type=text], input[type=date], select, input[type=number]{width:100%;padding:10px;border-radius:8px;border:1px solid #e1e6ea;box-sizing:border-box}
-    .row{display:flex;gap:12px;align-items:center}
-    .col-2{flex:2} .col-1{flex:1}
-    button{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-    table{width:100%;border-collapse:collapse;margin-top:14px}
-    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
-    th{font-weight:700}
-    .small-btn{background:#fff;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
-    .controls{margin-top:14px;display:flex;gap:12px;align-items:center}
-    .danger{background:var(--danger);color:#fff;border:none;padding:8px 12px;border-radius:8px}
-    .muted{color:var(--muted);font-size:13px}
-    .amount-controls{display:flex;gap:8px;align-items:center}
-    .amount-controls button{background:#fff;border:1px solid #ddd;padding:6px 8px;border-radius:6px;cursor:pointer}
-    input[type=number]{max-width:90px}
-    .center{display:flex;align-items:center}
-    .checkbox-cell{width:36px}
-    .error{color:var(--danger);font-weight:700;margin-top:8px}
-    .info{color:#0b74a6;margin-top:6px}
-    @media (max-width:640px){
-      .row{flex-direction:column;align-items:stretch}
-      .col-2,.col-1{width:100%}
+    :root{
+      --bg:#f7faf9; --card:#ffffff; --muted:#6b7b7a;
+      --primary:#0f8f83; --primary-weak:#e8f2f1;
+      --danger:#b02a2a; --danger-weak:#f6e8e8;
+      --border:#e6eeec; --text:#0f1f1e;
+      --radius:14px;
     }
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    .wrap{max-width:980px;margin:28px auto;padding:0 16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 22px}
+    h1{margin:0 0 6px 0;font-size:38px;font-weight:800;letter-spacing:.2px}
+    p.sub{margin:0 0 22px 0;color:var(--muted)}
+    label{display:block;font-weight:700;margin:14px 0 6px}
+    input[type="text"],input[type="date"],input[type="number"],select{
+      width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#fff;font:inherit
+    }
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .row-3{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:14px}
+    .actions-top{display:flex;justify-content:flex-end;margin-top:10px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border:0;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff}
+    .btn.secondary{background:var(--primary-weak);color:var(--primary)}
+    .btn.danger{background:var(--danger-weak);color:var(--danger)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:14px}
+    thead th{text-align:left;font-size:14px;color:var(--muted);border-bottom:1px solid var(--border);padding:10px 10px}
+    tbody td{padding:12px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tbody tr:last-child td{border-bottom:0}
+    .qty-input{width:70px}
+    .actions-row{display:flex;gap:12px;align-items:center;margin-top:12px}
+    .status{color:var(--muted);font-size:13px;margin-top:10px}
+    .right{margin-left:auto}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Shared inventory</h1>
-    <p class="muted">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
+  <div class="wrap">
+    <div class="card">
+      <h1>Shared inventory</h1>
+      <p class="sub">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
 
-    <label for="rowSelect">Select row</label>
-    <select id="rowSelect" aria-label="Select row"></select>
-
-    <div style="height:12px"></div>
-
-    <label for="itemObject">Object</label>
-    <input type="text" id="itemObject" placeholder="Object — e.g. Valve ABC-123">
-
-    <div style="height:8px"></div>
-    <div class="row">
-      <div class="col-2">
-        <label for="itemDate">Added date</label>
-        <input type="date" id="itemDate">
+      <div class="row">
+        <div>
+          <label for="rowSelect">Select row</label>
+          <select id="rowSelect" aria-label="Row"></select>
+        </div>
       </div>
-      <div class="col-1">
-        <label for="itemAmount">Amount</label>
-        <input type="number" id="itemAmount" min="1" value="1">
+
+      <div class="row-3" style="margin-top:10px">
+        <div>
+          <label for="itemObject">Object</label>
+          <input id="itemObject" type="text" placeholder="Object — e.g. Valve ABC-123"/>
+        </div>
+        <div>
+          <label for="itemDate">Added date</label>
+          <input id="itemDate" type="date"/>
+        </div>
+        <div>
+          <label for="itemAmount">Amount</label>
+          <input id="itemAmount" class="qty-input" type="number" min="1" step="1" value="1"/>
+        </div>
       </div>
-      <div style="width:170px;align-self:flex-end">
-        <button id="addBtn" style="width:100%">Add to list</button>
+
+      <div class="actions-top">
+        <button id="addBtn" class="btn primary" title="Add to list">
+          <!-- plus icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          Add to list
+        </button>
       </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
+            <th>Object</th>
+            <th style="width:110px;">Amount</th>
+            <th style="width:160px;">Added date</th>
+            <th style="width:220px;">Added at</th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+
+      <div class="actions-row">
+        <button id="removeSelectedBtn" class="btn danger" title="Remove selected">
+          <!-- minus icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          Remove selected
+        </button>
+
+        <div class="right">
+          <button id="exportCsvBtn" class="btn secondary" title="Export CSV">
+            <!-- export icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v10m0 0l-3-3m3 3l3-3M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div id="status" class="status">Status: ready</div>
     </div>
-
-    <table id="itemsTable" aria-live="polite">
-      <thead>
-        <tr>
-          <th class="checkbox-cell"></th>
-          <th>Object</th>
-          <th style="width:140px">Amount</th>
-          <th style="width:140px">Added date</th>
-          <th style="width:180px">Added at</th>
-        </tr>
-      </thead>
-      <tbody id="itemsBody">
-        <tr><td colspan="5" class="muted">No items yet</td></tr>
-      </tbody>
-    </table>
-
-    <div class="controls">
-      <button id="removeSelected" class="danger">Remove selected</button>
-      <button id="undoRemove" class="small-btn">Undo remove</button>
-      <button id="exportCsv" class="small-btn">Export CSV</button>
-      <div style="flex:1"></div>
-      <div id="status" class="muted">Status: idle</div>
-    </div>
-
-    <div id="debug" class="info" style="display:none"></div>
-    <div id="err" class="error" style="display:none"></div>
   </div>
 
-<script>
-/* ========== CONFIG - (inline keys as requested) ========== */
-const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-/* ======================================================== */
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // === Supabase config (din) ===
+    const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
 
-const headers = {
-  'apikey': SUPABASE_ANON_KEY,
-  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-  'Content-Type': 'application/json'
-};
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const rowSelect = document.getElementById('rowSelect');
-const itemObject = document.getElementById('itemObject');
-const itemDate = document.getElementById('itemDate');
-const itemAmount = document.getElementById('itemAmount');
-const addBtn = document.getElementById('addBtn');
-const itemsBody = document.getElementById('itemsBody');
-const statusEl = document.getElementById('status');
-const removeSelectedBtn = document.getElementById('removeSelected');
-const undoRemoveBtn = document.getElementById('undoRemove');
-const exportCsvBtn = document.getElementById('exportCsv');
-const debugEl = document.getElementById('debug');
-const errEl = document.getElementById('err');
+    // === State ===
+    const rowsList = Array.from({length:20},(_,i)=>`ROW${i+1}`);
+    let currentItems = []; // {id,row,object,amount,added_date,added_at}
 
-let currentRow = null;
-let currentItems = [];
-let lastRemoved = [];
-let saveTimer = null;
-let saving = false;
+    // === UI refs ===
+    const rowSelect      = document.getElementById('rowSelect');
+    const itemObject     = document.getElementById('itemObject');
+    const itemAmount     = document.getElementById('itemAmount');
+    const itemDate       = document.getElementById('itemDate');
+    const addBtn         = document.getElementById('addBtn');
+    const itemsBody      = document.getElementById('itemsBody');
+    const removeBtn      = document.getElementById('removeSelectedBtn');
+    const exportBtn      = document.getElementById('exportCsvBtn');
+    const checkAll       = document.getElementById('checkAll');
+    const statusEl       = document.getElementById('status');
 
-/* helpers */
-function setStatus(s){ statusEl.textContent = 'Status: ' + s; }
-function setDebug(s){ debugEl.style.display='block'; debugEl.textContent = s; }
-function setError(s){ errEl.style.display='block'; errEl.textContent = s; }
-function clearError(){ errEl.style.display='none'; errEl.textContent=''; }
-function uid(len=8){ return Math.random().toString(36).slice(2,2+len) + Date.now().toString(36).slice(-4);}
+    // === Helpers ===
+    const setStatus = (s) => statusEl.textContent = `Status: ${s}`;
+    const todayStr  = () => new Date().toISOString().slice(0,10);
 
-/* ---------- Replacement functions (fix duplicates + ensure rows) ---------- */
-
-function fillDefaultRows(){
-  // immediate local fallback so select is clickable
-  const rows = Array.from({length:20}, (_,i)=>`ROW${i+1}`);
-  rowSelect.innerHTML = rows.map(r=>`<option value="${r}">${r}</option>`).join('');
-}
-
-async function fetchRows(){
-  // returns array of row strings from supabase (not normalized)
-  const url = `${SUPABASE_URL}/rest/v1/lists?select=row`;
-  const res = await fetch(url, { headers });
-  if(!res.ok) throw new Error('fetchRows failed ' + res.status);
-  const arr = await res.json();
-  return arr.map(r => (r.row || '').toString());
-}
-
-async function createRow(row){
-  const url = `${SUPABASE_URL}/rest/v1/lists`;
-  const body = { row, items: [] };
-  const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(body) });
-  return res;
-}
-
-async function ensureRows(){
-  setStatus('ensuring rows exist...');
-  try{
-    const desired = Array.from({length:20}, (_,i)=>`ROW${i+1}`);
-    const existing = await fetchRows().catch(()=>[]);
-    const existingUpper = existing.map(r=>(''+r).toUpperCase());
-    const missing = desired.filter(r => !existingUpper.includes(r));
-    if(missing.length === 0){
-      setStatus('rows ensured');
-      return;
+    function populateRows(){
+      rowSelect.innerHTML = '';
+      rowsList.forEach(r=>{
+        const opt = document.createElement('option');
+        opt.value = r; opt.textContent = r;
+        rowSelect.appendChild(opt);
+      });
+      rowSelect.value = 'ROW1';
     }
-    // create missing rows one by one (best-effort)
-    for(const r of missing){
-      try{
-        await createRow(r);
-      }catch(e){
-        console.warn('createRow failed for', r, e);
-      }
+
+    function renderItems(){
+      itemsBody.innerHTML = '';
+      currentItems.forEach((it, idx)=>{
+        const tr = document.createElement('tr');
+
+        const tdCheck = document.createElement('td');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.id = it.id;
+        tdCheck.appendChild(cb);
+
+        const tdObj = document.createElement('td');
+        tdObj.textContent = it.object ?? '';
+
+        const tdAmt = document.createElement('td');
+        tdAmt.textContent = Number(it.amount ?? 0);
+
+        const tdDate = document.createElement('td');
+        tdDate.textContent = (it.added_date ?? '') || '';
+
+        const tdAt = document.createElement('td');
+        tdAt.textContent = it.added_at ? new Date(it.added_at).toLocaleString() : '';
+
+        tr.appendChild(tdCheck);
+        tr.appendChild(tdObj);
+        tr.appendChild(tdAmt);
+        tr.appendChild(tdDate);
+        tr.appendChild(tdAt);
+        itemsBody.appendChild(tr);
+      });
     }
-    setStatus('rows ensured');
-  }catch(e){
-    console.warn(e);
-    setStatus('rows: ensure failed');
-  }
-}
 
-async function populateDropdown(){
-  setStatus('loading rows...');
-  try{
-    const rowsFromServer = await fetchRows().catch(()=>[]);
-    // normalize everything to UPPERCASE strings
-    const desired = Array.from({length:20}, (_,i)=>`ROW${i+1}`);
-    const normalizedServer = (rowsFromServer||[]).map(r => (''+r).toUpperCase());
-    // merge desired first then server extras
-    const merged = [...desired, ...normalizedServer];
-    // remove duplicates preserving order
-    const seen = new Set();
-    const unique = [];
-    for(const r of merged){
-      const u = r.toUpperCase();
-      if(!seen.has(u)){
-        seen.add(u);
-        unique.push(u);
-      }
+    // === Supabase I/O ===
+    async function loadAll(){
+      setStatus('loading...');
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .order('added_at', { ascending: true });
+
+      if(error){ setStatus('error loading'); console.error(error); return; }
+      currentItems = Array.isArray(data) ? data : [];
+      renderItems();
+      setStatus('ready');
     }
-    rowSelect.innerHTML = unique.map(r=>`<option value="${r}">${r}</option>`).join('');
-    setStatus('rows loaded');
-    setDebug('rows: ' + unique.join(', '));
-    if(!currentRow || !seen.has((currentRow||'').toUpperCase())){
-      currentRow = unique[0] || null;
-    }
-    if(currentRow) rowSelect.value = currentRow.toUpperCase();
-  }catch(e){
-    console.warn('populateDropdown failed', e);
-    setStatus('failed to load rows from server — using defaults');
-    setDebug('populateDropdown error: ' + e.message);
-  }
-}
 
-/* ---------- load/save items ---------- */
+    async function addItem(){
+      const obj = itemObject.value.trim();
+      if(!obj){ alert('Enter an object name'); return; }
 
-async function loadItemsForRow(row){
-  clearError();
-  setStatus('loading items for ' + row);
-  try{
-    const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(row)}`;
-    const res = await fetch(url, { headers });
-    if(!res.ok){ throw new Error('load failed ' + res.status); }
-    const arr = await res.json();
-    const items = (arr[0] && arr[0].items) ? arr[0].items : [];
-    currentItems = items;
-    renderItems();
-    setStatus('loaded');
-  } catch(e){
-    console.error(e);
-    setError('Could not load items: ' + e.message);
-    setStatus('load failed');
-  }
-}
+      const dateVal = itemDate.value || todayStr();
+      const amountVal = Number(itemAmount.value) || 1;
 
-function renderItems(){
-  itemsBody.innerHTML = '';
-  if(!currentItems || currentItems.length === 0){
-    const tr = document.createElement('tr');
-    const td = document.createElement('td'); td.colSpan = 5; td.className='muted'; td.textContent='No items yet';
-    tr.appendChild(td); itemsBody.appendChild(tr); return;
-  }
-  currentItems.forEach((it, idx)=>{
-    const tr = document.createElement('tr');
+      const newItem = {
+        row: rowSelect.value,
+        object: obj,
+        amount: amountVal,
+        added_date: dateVal,
+        added_at: new Date().toISOString()
+      };
 
-    const chTd = document.createElement('td'); chTd.className = 'checkbox-cell';
-    const chk = document.createElement('input'); chk.type='checkbox'; chk.dataset.idx = idx;
-    chTd.appendChild(chk);
+      setStatus('saving...');
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert(newItem)
+        .select()
+        .single();
 
-    const objTd = document.createElement('td'); objTd.textContent = it.object || '';
-
-    const amountTd = document.createElement('td');
-    const amountWrap = document.createElement('div'); amountWrap.className='amount-controls';
-    const minus = document.createElement('button'); minus.textContent='-'; minus.className='small-btn';
-    const num = document.createElement('span'); num.style.minWidth='26px'; num.style.display='inline-block'; num.style.textAlign='center'; num.textContent = (it.amount || 1);
-    const plus = document.createElement('button'); plus.textContent='+'; plus.className='small-btn';
-    minus.onclick = ()=>{ adjustAmount(idx, -1); };
-    plus.onclick = ()=>{ adjustAmount(idx, +1); };
-    amountWrap.appendChild(minus); amountWrap.appendChild(num); amountWrap.appendChild(plus);
-    amountTd.appendChild(amountWrap);
-
-    const dateTd = document.createElement('td'); dateTd.textContent = it.added_date || '';
-
-    const atTd = document.createElement('td'); atTd.textContent = it.added_at || '';
-
-    tr.appendChild(chTd); tr.appendChild(objTd); tr.appendChild(amountTd); tr.appendChild(dateTd); tr.appendChild(atTd);
-    itemsBody.appendChild(tr);
-  });
-}
-
-function adjustAmount(idx, delta){
-  const it = currentItems[idx];
-  if(!it) return;
-  let newAmt = Number(it.amount || 0) + delta;
-  if(newAmt < 0) newAmt = 0;
-  currentItems[idx].amount = newAmt;
-  renderItems();
-  scheduleSave();
-}
-
-/* debounced save */
-function scheduleSave(){
-  if(saveTimer) clearTimeout(saveTimer);
-  setStatus('changes pending...');
-  saveTimer = setTimeout(()=>{ saveItemsToCloud(); }, 700);
-}
-
-async function saveItemsToCloud(){
-  if(!currentRow) return;
-  if(saving) return;
-  saving = true;
-  setStatus('saving...');
-  try{
-    const url = `${SUPABASE_URL}/rest/v1/lists?row=eq.${encodeURIComponent(currentRow)}`;
-    const body = { items: currentItems };
-    const h = Object.assign({}, headers, { 'Prefer': 'return=representation' });
-    // PATCH; if zero rows updated (row might not exist), fall back to insert
-    const res = await fetch(url, { method:'PATCH', headers:h, body: JSON.stringify(body) });
-    if(res.ok){
+      if(error){ setStatus('save failed'); console.error(error); return; }
+      currentItems.push(data);
+      renderItems();
+      itemObject.value=''; itemAmount.value=1; // keep date
       setStatus('saved');
-      saving = false;
-      return true;
-    } else {
-      // try insert if PATCH failed (e.g. row record missing)
-      const insertUrl = `${SUPABASE_URL}/rest/v1/lists`;
-      const insertBody = { row: currentRow, items: currentItems };
-      const ins = await fetch(insertUrl, { method:'POST', headers: Object.assign({}, headers, {'Prefer':'return=representation'}), body: JSON.stringify(insertBody) });
-      if(!ins.ok) throw new Error('save failed, status ' + ins.status);
-      setStatus('saved');
-      saving = false;
-      return true;
     }
-  } catch(e){
-    console.error(e);
-    setError('Save failed: ' + e.message);
-    setStatus('save failed');
-    saving = false;
-    return false;
-  }
-}
 
-/* add item from form */
-function addItemFromForm(){
-  const obj = itemObject.value && itemObject.value.trim();
-  if(!obj){ alert('Object name is required'); return; }
-  const dateVal = itemDate.value || new Date().toISOString().slice(0,10);
-  const amountVal = Number(itemAmount.value) || 1;
-  const newItem = {
-    id: uid(6),
-    object: obj,
-    amount: amountVal,
-    added_date: dateVal,
-    added_at: new Date().toLocaleString()
-  };
-  currentItems.push(newItem);
-  renderItems();
-  itemObject.value=''; itemAmount.value = 1;
-  scheduleSave();
-}
+    async function removeSelected(){
+      const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]:checked'));
+      const ids = checks.map(c=>c.dataset.id);
+      if(ids.length===0){ alert('No items selected'); return; }
 
-/* remove selected */
-function removeSelected(){
-  const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]'));
-  const idxs = checks.filter(c=>c.checked).map(c=>Number(c.dataset.idx)).sort((a,b)=>b-a);
-  if(idxs.length === 0) return alert('No items selected');
-  lastRemoved = idxs.map(i => currentItems[i]);
-  for(const i of idxs){ currentItems.splice(i,1); }
-  renderItems();
-  scheduleSave();
-}
+      setStatus('removing...');
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .in('id', ids);
 
-/* undo remove */
-function undoRemove(){
-  if(!lastRemoved || lastRemoved.length === 0) return alert('Nothing to undo');
-  currentItems = currentItems.concat(lastRemoved);
-  lastRemoved = [];
-  renderItems();
-  scheduleSave();
-}
+      if(error){ setStatus('remove failed'); console.error(error); return; }
+      currentItems = currentItems.filter(it => !ids.includes(String(it.id)));
+      renderItems();
+      setStatus('removed');
+      checkAll.checked = false;
+    }
 
-/* export CSV */
-function exportCsv(){
-  if(!currentItems || currentItems.length === 0) return alert('No items to export');
-  const rows = [['id','object','amount','added_date','added_at']];
-  currentItems.forEach(it => rows.push([it.id||'', it.object||'', it.amount||'', it.added_date||'', it.added_at||'']));
-  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = (currentRow || 'list') + '.csv';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-}
+    function exportCSV(items){
+      if(!Array.isArray(items) || items.length===0){ alert('Nothing to export'); return; }
+      const headers = ['row','object','amount','added_date','added_at'];
+      const rows = items.map(it => [
+        it.row ?? '',
+        it.object ?? '',
+        it.amount ?? 0,
+        it.added_date ?? '',
+        it.added_at ?? ''
+      ]);
+      const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
+      const csv = [headers.join(','), ...rows.map(r => r.map(esc).join(','))].join('\r\n');
+      const blob = new Blob(["\uFEFF"+csv], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const d = new Date();
+      a.href = url;
+      a.download = `inventory-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
 
-/* row change handler */
-async function onRowChange(){
-  currentRow = rowSelect.value;
-  await loadItemsForRow(currentRow);
-}
+    // === Wire up ===
+    addBtn.addEventListener('click', addItem);
+    removeBtn.addEventListener('click', removeSelected);
+    exportBtn.addEventListener('click', ()=>exportCSV(currentItems));
+    checkAll.addEventListener('change', (e)=>{
+      itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
+    });
 
-/* init */
-async function init(){
-  setStatus('initializing...');
-  fillDefaultRows();             // immediate fallback
-  await populateDropdown();      // try to load server rows (replaces select if ok)
-  rowSelect.addEventListener('change', onRowChange);
-  addBtn.addEventListener('click', addItemFromForm);
-  removeSelectedBtn.addEventListener('click', removeSelected);
-  undoRemoveBtn.addEventListener('click', undoRemove);
-  exportCsvBtn.addEventListener('click', exportCsv);
-
-  itemDate.value = new Date().toISOString().slice(0,10);
-  currentRow = rowSelect.value || null;
-
-  await ensureRows();            // make sure server has ROW1..ROW20
-  currentRow = rowSelect.value || currentRow;
-  if(currentRow) await loadItemsForRow(currentRow);
-
-  // simple poll for remote changes
-  setInterval(async () => {
-    try{
-      if(!currentRow) return;
-      const url = `${SUPABASE_URL}/rest/v1/lists?select=items&row=eq.${encodeURIComponent(currentRow)}`;
-      const res = await fetch(url, { headers });
-      if(!res.ok) return;
-      const arr = await res.json();
-      const remoteItems = (arr[0] && arr[0].items) ? arr[0].items : [];
-      if(JSON.stringify(remoteItems) !== JSON.stringify(currentItems)){
-        currentItems = remoteItems;
-        renderItems();
-        setStatus('List updated from cloud (remote changes).');
-      }
-    }catch(e){}
-  }, 6000);
-
-  setStatus('ready');
-}
-
-init().catch(e=>{ console.error(e); setError('Init failed: '+ e.message); setStatus('init failed'); });
-
-</script>
+    // === Init ===
+    (function init(){
+      populateRows();
+      itemDate.value = todayStr();
+      loadAll();
+    })();
+  </script>
 </body>
 </html>
