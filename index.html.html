@@ -133,7 +133,8 @@
       </div>
 
       <label for="loginUser">Username</label>
-      <input id="loginUser" type="text" placeholder="Stegra-logistics" autocomplete="username"/>
+      <!-- empty field: no placeholder, no hint -->
+      <input id="loginUser" type="text" autocomplete="username"/>
 
       <label for="loginPass">Password</label>
       <input id="loginPass" type="password" placeholder="••••••••••" autocomplete="current-password"/>
@@ -282,7 +283,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     /******** SIMPLE AUTH (client-side gate) ********/
-    const FIXED_USER = 'Stegra-logistics';
+    // Case-insensitive: store constant in lowercase, compare with input.toLowerCase()
+    const FIXED_USER = 'stegra-logistics';
     // SHA-256 hash of "Stegra123"
     const FIXED_PASS_SHA256 = 'b2320acb7841b387c0ad4c23bb5c41d559fe8d1192816f2c54fad279e8a8a3e6';
 
@@ -305,7 +307,7 @@
     }
     async function doLogin(){
       loginErr.style.display = 'none';
-      const u = (loginUser.value || '').trim();
+      const u = (loginUser.value || '').trim().toLowerCase();
       const pHash = await sha256Hex(loginPass.value || '');
       if(u === FIXED_USER && pHash === FIXED_PASS_SHA256){
         localStorage.setItem('inv_auth', JSON.stringify({u, t: Date.now()}));
@@ -346,7 +348,7 @@
     let currentRow = 'ROW1';
     let currentItems = [];
 
-    // DOM refs (define ALL to avoid missing refs)
+    // DOM refs
     const rowSelect  = document.getElementById('rowSelect');
     const itemObject = document.getElementById('itemObject');
     const itemAmount = document.getElementById('itemAmount');
@@ -506,7 +508,7 @@
     function exportCSV(items){
       if(!Array.isArray(items) || items.length===0){ alert('Nothing to export'); return; }
       const headers = ['row','object','amount','added_date','added_at'];
-      const rows = items.map(it => [it.row ?? '', it.object ?? '', it.amount ?? 0, it.added_date ?? '', it.added_at ?? '']);
+      const rows = items.map(it => [ it.row ?? '', it.object ?? '', it.amount ?? 0, it.added_date ?? '', it.added_at ?? '' ]);
       const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
       const csv = [headers.join(','), ...rows.map(r => r.map(esc).join(','))].join('\r\n');
       const blob = new Blob(["\uFEFF"+csv], { type:'text/csv;charset=utf-8;' });
@@ -519,7 +521,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // wire main events (use the refs we defined)
+    // wire main events
     function wireMainEvents(){
       addBtn.addEventListener('click', addItem);
       removeBtn.addEventListener('click', removeSelected);
@@ -561,6 +563,7 @@
         .from(TABLE).select('row,amount');
       if(error){ setStatus(`dashboard error: ${error.message}`,'err'); console.error(error); return; }
 
+      // Aggregate totals per row
       const agg = {};
       for(const r of rowsList) agg[r] = 0;
       for(const it of (data||[])){
@@ -599,7 +602,6 @@
       dashCanvas.width = Math.floor(cssW * dpr);
       dashCanvas.height = Math.floor(cssH * dpr);
 
-      // reset transform on every resize by assigning width/height above
       ctx.scale(dpr, dpr);
       ctx.clearRect(0,0,cssW,cssH);
 
@@ -623,7 +625,7 @@
         ctx.fillStyle = '#3b4746';
         ctx.textAlign = 'left';
         ctx.fillText(d.row, 12, y + barHeight - 6);
-        // bar
+        // bar (relative to largest row)
         const w = maxAmount === 0 ? 0 : Math.round((d.amount / maxAmount) * chartW);
         ctx.fillStyle = '#0f8f83';
         roundRect(ctx, paddingLeft, y, w, barHeight, 6, true, false);
@@ -666,15 +668,11 @@
 
     /******** INIT ********/
     async function initApp(){
-      // fill rows + defaults
+      // rows + defaults
       rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
       rowSelect.value = currentRow;
       itemDate.value = todayStr();
-
-      // attach main listeners (once)
       wireMainEvents();
-
-      // initial data
       await loadForRow(currentRow);
     }
   </script>
