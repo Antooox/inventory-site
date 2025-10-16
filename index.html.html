@@ -12,7 +12,8 @@
       --border:#e6eeec; --text:#0f1f1e; --radius:14px;
     }
     html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; box-sizing:border-box}
+    *,*:before,*:after{box-sizing:inherit}
     .wrap{max-width:980px;margin:28px auto;padding:0 16px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
     h1{margin:0 0 6px 0;font-size:38px;font-weight:800;letter-spacing:.2px}
@@ -21,27 +22,43 @@
     input[type="text"],input[type="date"],input[type="number"],select{
       width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#fff;font:inherit
     }
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .row-3{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:14px}
+
+    /* Form row layout: Object | Date | Amount */
+    .row-grid{
+      display:grid;
+      grid-template-columns: minmax(240px, 1fr) 220px 130px; /* <-- krockar inte */
+      gap:14px;
+    }
+    @media (max-width:760px){
+      .row-grid{grid-template-columns:1fr}
+    }
 
     .btn{
       display:inline-flex;align-items:center;gap:8px;
       padding:11px 16px;border:0;border-radius:10px;font-weight:700;cursor:pointer;
       line-height:1; user-select:none;
     }
-    .btn svg{width:18px;height:18px;display:inline-block;flex-shrink:0; margin-right:6px}
+    .btn svg{width:18px;height:18px;display:inline-block;flex-shrink:0}
     .btn.primary{background:var(--primary);color:#fff}
     .btn.secondary{background:var(--primary-weak);color:var(--primary)}
     .btn.danger{background:var(--danger-weak);color:var(--danger)}
     .btn:disabled{opacity:.6;cursor:not-allowed}
+    .actions-top{display:flex;justify-content:flex-end;margin-top:10px}
+    .actions-row{display:flex;gap:12px;align-items:center;margin-top:12px}
 
     table{width:100%;border-collapse:separate;border-spacing:0;margin-top:14px}
     thead th{text-align:left;font-size:14px;color:var(--muted);border-bottom:1px solid var(--border);padding:10px 10px}
     tbody td{padding:12px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
     tbody tr:last-child td{border-bottom:0}
-    .qty-input{width:80px}
-    .actions-top{display:flex;justify-content:flex-end;margin-top:10px}
-    .actions-row{display:flex;gap:12px;align-items:center;margin-top:12px}
+
+    .amount-cell{display:flex;align-items:center;gap:8px}
+    .qty-btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;
+    }
+    .qty-btn svg{width:16px;height:16px}
+    .qty-value{min-width:20px;text-align:center}
+
     .status{color:var(--muted);font-size:13px;margin-top:10px}
     .status.error{color:#a11}
     .right{margin-left:auto}
@@ -53,14 +70,12 @@
       <h1>Shared inventory</h1>
       <p class="sub">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
 
-      <div class="row">
-        <div>
-          <label for="rowSelect">Select row</label>
-          <select id="rowSelect" aria-label="Row"></select>
-        </div>
+      <div>
+        <label for="rowSelect">Select row</label>
+        <select id="rowSelect" aria-label="Row"></select>
       </div>
 
-      <div class="row-3" style="margin-top:10px">
+      <div class="row-grid" style="margin-top:10px">
         <div>
           <label for="itemObject">Object</label>
           <input id="itemObject" type="text" placeholder="Object — e.g. Valve ABC-123"/>
@@ -71,7 +86,7 @@
         </div>
         <div>
           <label for="itemAmount">Amount</label>
-          <input id="itemAmount" class="qty-input" type="number" min="1" step="1" value="1"/>
+          <input id="itemAmount" type="number" min="1" step="1" value="1"/>
         </div>
       </div>
 
@@ -90,7 +105,7 @@
           <tr>
             <th style="width:40px;"><input type="checkbox" id="checkAll" title="Select all"/></th>
             <th>Object</th>
-            <th style="width:110px;">Amount</th>
+            <th style="width:170px;">Amount</th>
             <th style="width:160px;">Added date</th>
             <th style="width:220px;">Added at</th>
           </tr>
@@ -158,13 +173,8 @@
 
     /******** UI helpers ********/
     function populateRows(){
-      rowSelect.innerHTML = '';
-      rowsList.forEach(r=>{
-        const opt = document.createElement('option');
-        opt.value = r; opt.textContent = r;
-        rowSelect.appendChild(opt);
-      });
-      if (!rowSelect.value) rowSelect.value = 'ROW1';
+      rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
+      rowSelect.value = 'ROW1';
     }
 
     function renderItems(){
@@ -172,14 +182,41 @@
       currentItems.forEach(it=>{
         const tr = document.createElement('tr');
 
+        // checkbox
         const tdCheck = document.createElement('td');
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.dataset.id = it.id;
         tdCheck.appendChild(cb);
 
+        // object
         const tdObj = document.createElement('td');  tdObj.textContent = it.object ?? '';
-        const tdAmt = document.createElement('td');  tdAmt.textContent = Number(it.amount ?? 0);
+
+        // amount + +/- controls
+        const tdAmt = document.createElement('td');
+        tdAmt.className = 'amount-cell';
+        const decBtn = document.createElement('button');
+        decBtn.className = 'qty-btn';
+        decBtn.setAttribute('data-action','dec');
+        decBtn.setAttribute('data-id', it.id);
+        decBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+
+        const valSpan = document.createElement('span');
+        valSpan.className = 'qty-value';
+        valSpan.setAttribute('data-val-id', it.id);
+        valSpan.textContent = Number(it.amount ?? 0);
+
+        const incBtn = document.createElement('button');
+        incBtn.className = 'qty-btn';
+        incBtn.setAttribute('data-action','inc');
+        incBtn.setAttribute('data-id', it.id);
+        incBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+
+        tdAmt.appendChild(decBtn);
+        tdAmt.appendChild(valSpan);
+        tdAmt.appendChild(incBtn);
+
+        // dates
         const tdDate= document.createElement('td');  tdDate.textContent = it.added_date ?? '';
         const tdAt  = document.createElement('td');  tdAt.textContent = it.added_at ? new Date(it.added_at).toLocaleString() : '';
 
@@ -202,7 +239,7 @@
       const obj = itemObject.value.trim();
       if(!obj){ alert('Enter an object name'); return; }
       const dateVal = itemDate.value || todayStr();
-      const amountVal = Number(itemAmount.value) || 1;
+      const amountVal = Math.max(1, Number(itemAmount.value) || 1);
 
       const newItem = {
         id: (crypto?.randomUUID?.() || String(Date.now())),
@@ -219,9 +256,31 @@
 
       currentItems.push(data);
       renderItems();
-      // rensa fält men rör INTE knapparnas HTML → ikonerna stannar
       itemObject.value=''; itemAmount.value=1;
       setStatus('saved');
+    }
+
+    async function updateAmount(id, delta){
+      const idx = currentItems.findIndex(x => String(x.id) === String(id));
+      if(idx === -1) return;
+      const newVal = Math.max(0, Number(currentItems[idx].amount || 0) + delta);
+      // Optimistic UI
+      currentItems[idx].amount = newVal;
+      const span = document.querySelector(`[data-val-id="${id}"]`);
+      if(span) span.textContent = newVal;
+      setStatus('updating amount...');
+
+      const { data, error } = await supabase.from(TABLE).update({ amount: newVal }).eq('id', id).select().single();
+      if(error){
+        setStatus(`update failed: ${error.message}`, true);
+        console.error(error);
+        // rollback
+        currentItems[idx].amount = Math.max(0, newVal - delta);
+        if(span) span.textContent = currentItems[idx].amount;
+        return;
+      }
+      currentItems[idx] = data || currentItems[idx];
+      setStatus('updated');
     }
 
     async function removeSelected(){
@@ -263,14 +322,20 @@
       itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
     });
 
+    // Delegate clicks for +/-
+    itemsBody.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.qty-btn');
+      if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const act = btn.getAttribute('data-action');
+      updateAmount(id, act==='inc' ? +1 : -1);
+    });
+
     /******** Init ********/
     (async function init(){
-      // fyll rader
       rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
       rowSelect.value = 'ROW1';
-      // dagens datum
-      itemDate.value = (new Date()).toISOString().slice(0,10);
-      // ladda data
+      itemDate.value = todayStr();
       await loadAll();
     })();
   </script>
