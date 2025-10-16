@@ -23,17 +23,18 @@
     }
     .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .row-3{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:14px}
-    .row-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
     .btn{
       display:inline-flex;align-items:center;gap:8px;
       padding:11px 16px;border:0;border-radius:10px;font-weight:700;cursor:pointer;
       line-height:1; user-select:none;
     }
-    .btn svg{width:16px;height:16px;flex-shrink:0;display:inline-block}
+    .btn svg{width:18px;height:18px;display:inline-block;flex-shrink:0; margin-right:6px}
     .btn.primary{background:var(--primary);color:#fff}
     .btn.secondary{background:var(--primary-weak);color:var(--primary)}
     .btn.danger{background:var(--danger-weak);color:var(--danger)}
     .btn:disabled{opacity:.6;cursor:not-allowed}
+
     table{width:100%;border-collapse:separate;border-spacing:0;margin-top:14px}
     thead th{text-align:left;font-size:14px;color:var(--muted);border-bottom:1px solid var(--border);padding:10px 10px}
     tbody td{padding:12px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -44,9 +45,6 @@
     .status{color:var(--muted);font-size:13px;margin-top:10px}
     .status.error{color:#a11}
     .right{margin-left:auto}
-    .mini{font-size:12px;color:var(--muted)}
-    .input-mini{padding:8px 10px;border:1px solid var(--border);border-radius:8px}
-    .tag{font-size:12px;background:#eef6f5;color:#0f544f;border:1px solid #d5ece9;border-radius:999px;padding:4px 8px}
   </style>
 </head>
 <body>
@@ -54,13 +52,6 @@
     <div class="card">
       <h1>Shared inventory</h1>
       <p class="sub">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
-
-      <!-- Tabellnamn – sparas automatiskt på blur/Enter -->
-      <div class="row-inline" style="margin-bottom:6px">
-        <span class="mini">Table:</span>
-        <input id="tableName" class="input-mini" placeholder="inventory_items" style="min-width:220px"/>
-        <span id="tableDetected" class="tag" style="display:none"></span>
-      </div>
 
       <div class="row">
         <div>
@@ -86,6 +77,7 @@
 
       <div class="actions-top">
         <button id="addBtn" class="btn primary" title="Add to list">
+          <!-- PLUS ICON -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
           </svg>
@@ -108,14 +100,16 @@
 
       <div class="actions-row">
         <button id="removeSelectedBtn" class="btn danger" title="Remove selected">
+          <!-- MINUS ICON -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
           </svg>
-        <span>Remove selected</span>
+          <span>Remove selected</span>
         </button>
 
         <div class="right">
           <button id="exportCsvBtn" class="btn secondary" title="Export CSV">
+            <!-- EXPORT ICON -->
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v10m0 0l-3-3m3 3l3-3M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -131,23 +125,18 @@
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /***********************
-     *  CONFIG & CLIENT    *
-     ***********************/
+    /******** CONFIG ********/
     const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
+    const TABLE = 'inventory_items'; // ändra om du byter tabellnamn
+
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    /**********
-     *  STATE *
-     **********/
+    /******** STATE ********/
     const rowsList = Array.from({length:20},(_,i)=>`ROW${i+1}`);
-    let TABLE = null;
     let currentItems = []; // {id,row,object,amount,added_date,added_at}
 
-    /********
-     *  UI  *
-     ********/
+    /******** UI refs ********/
     const rowSelect  = document.getElementById('rowSelect');
     const itemObject = document.getElementById('itemObject');
     const itemAmount = document.getElementById('itemAmount');
@@ -160,9 +149,6 @@
     const exportBtn  = document.getElementById('exportCsvBtn');
     const statusEl   = document.getElementById('status');
 
-    const tableNameInput = document.getElementById('tableName');
-    const tableDetected  = document.getElementById('tableDetected');
-
     const setStatus = (s, isError=false) => {
       statusEl.textContent = `Status: ${s}`;
       statusEl.classList.toggle('error', !!isError);
@@ -170,9 +156,7 @@
     };
     const todayStr  = () => new Date().toISOString().slice(0,10);
 
-    /****************
-     *  UI helpers  *
-     ****************/
+    /******** UI helpers ********/
     function populateRows(){
       rowSelect.innerHTML = '';
       rowsList.forEach(r=>{
@@ -204,43 +188,8 @@
       });
     }
 
-    /*****************
-     *  TABLE SELECT *
-     *****************/
-    function getSavedTable(){
-      return localStorage.getItem('inv_table_name') || 'inventory_items';
-    }
-    function setTable(name, detected=true){
-      TABLE = name;
-      tableNameInput.value = name;
-      tableDetected.textContent = (detected ? 'using: ' : 'suggested: ') + name;
-      tableDetected.style.display = 'inline-block';
-      if (detected) localStorage.setItem('inv_table_name', name);
-    }
-    async function tableExists(name){
-      try{
-        const { error } = await supabase.from(name).select('id', { head:true, count:'exact' });
-        if(error){
-          const msg = (error && (error.message || error.toString())) || '';
-          if(/does not exist|schema cache|not found/i.test(msg)) return false;
-          return true; // RLS-felet => tabellen finns
-        }
-        return true;
-      }catch(e){ return false; }
-    }
-    async function ensureTable(){
-      const candidate = getSavedTable();
-      setTable(candidate, true);
-      if(!(await tableExists(candidate))){
-        setStatus(`table "${candidate}" not found`, true);
-      }
-    }
-
-    /*****************
-     *  SUPABASE IO  *
-     *****************/
+    /******** Supabase I/O ********/
     async function loadAll(){
-      if(!TABLE){ setStatus('no table selected', true); return; }
       setStatus(`loading from "${TABLE}"...`);
       const { data, error } = await supabase.from(TABLE).select('*').order('added_at',{ascending:true});
       if(error){ setStatus(`error loading: ${error.message}`, true); console.error(error); return; }
@@ -250,7 +199,6 @@
     }
 
     async function addItem(){
-      if(!TABLE){ setStatus('no table selected', true); return; }
       const obj = itemObject.value.trim();
       if(!obj){ alert('Enter an object name'); return; }
       const dateVal = itemDate.value || todayStr();
@@ -271,13 +219,12 @@
 
       currentItems.push(data);
       renderItems();
-      // rensa bara fält, inte knappens HTML (ikon/label stannar)
+      // rensa fält men rör INTE knapparnas HTML → ikonerna stannar
       itemObject.value=''; itemAmount.value=1;
       setStatus('saved');
     }
 
     async function removeSelected(){
-      if(!TABLE){ setStatus('no table selected', true); return; }
       const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]:checked'));
       const ids = checks.map(c=>c.dataset.id);
       if(ids.length===0){ alert('No items selected'); return; }
@@ -308,9 +255,7 @@
       URL.revokeObjectURL(url);
     }
 
-    /****************
-     *  WIRE UP UI  *
-     ****************/
+    /******** Wire up ********/
     addBtn.addEventListener('click', addItem);
     removeBtn.addEventListener('click', removeSelected);
     exportBtn.addEventListener('click', ()=>exportCSV(currentItems));
@@ -318,26 +263,15 @@
       itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
     });
 
-    // Byt tabell när fältet ändras (Enter eller lämnar fältet)
-    async function applyTypedTable(){
-      const name = tableNameInput.value.trim();
-      if(!name) return;
-      setTable(name, true);
-      localStorage.setItem('inv_table_name', name);
-      await loadAll();
-    }
-    tableNameInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); applyTypedTable(); }});
-    tableNameInput.addEventListener('blur', applyTypedTable);
-
-    /*********
-     * INIT  *
-     *********/
+    /******** Init ********/
     (async function init(){
-      populateRows();
-      itemDate.value = todayStr();
-      setTable(getSavedTable(), true); // välj automatiskt
-      await ensureTable();             // kolla att den finns (status visar annars)
-      await loadAll();                 // ladda direkt – ingen Apply-knapp behövs
+      // fyll rader
+      rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
+      rowSelect.value = 'ROW1';
+      // dagens datum
+      itemDate.value = (new Date()).toISOString().slice(0,10);
+      // ladda data
+      await loadAll();
     })();
   </script>
 </body>
