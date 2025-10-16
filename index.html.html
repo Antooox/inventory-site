@@ -142,13 +142,14 @@
     /******** CONFIG ********/
     const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-    const TABLE = 'inventory_items'; // byt här om du ändrar tabellnamn
+    const TABLE = 'inventory_items';
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     /******** STATE ********/
     const rowsList = Array.from({length:20},(_,i)=>`ROW${i+1}`);
-    let currentItems = []; // {id,row,object,amount,added_date,added_at}
+    let currentRow = 'ROW1';
+    let currentItems = []; // bara för aktuell rad
 
     /******** UI refs ********/
     const rowSelect  = document.getElementById('rowSelect');
@@ -173,7 +174,7 @@
     /******** UI helpers ********/
     function populateRows(){
       rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
-      rowSelect.value = 'ROW1';
+      rowSelect.value = currentRow;
     }
 
     function renderItems(){
@@ -229,9 +230,14 @@
     }
 
     /******** Supabase I/O ********/
-    async function loadAll(){
-      setStatus(`loading from "${TABLE}"...`);
-      const { data, error } = await supabase.from(TABLE).select('*').order('added_at',{ascending:true});
+    async function loadForRow(row){
+      setStatus(`loading ${row}...`);
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('row', row)              // <-- filtrera på vald rad
+        .order('added_at',{ascending:true});
+
       if(error){ setStatus(`error loading: ${error.message}`, true); console.error(error); return; }
       currentItems = Array.isArray(data) ? data : [];
       renderItems();
@@ -246,7 +252,7 @@
 
       const newItem = {
         id: (crypto?.randomUUID?.() || String(Date.now())),
-        row: rowSelect.value,
+        row: currentRow,                // <-- bind till vald rad
         object: obj,
         amount: amountVal,
         added_date: dateVal,
@@ -257,9 +263,11 @@
       const { data, error } = await supabase.from(TABLE).insert(newItem).select().maybeSingle();
       if(error){ setStatus(`save failed: ${error.message}`, true); console.error('Supabase insert error:', error); return; }
 
-      // data kan vara null om RLS/RETURNING ändras; pusha vår newItem som fallback
-      currentItems.push(data || newItem);
-      renderItems();
+      // lägg bara till i listan om vi står kvar på samma rad
+      if (currentRow === newItem.row) {
+        currentItems.push(data || newItem);
+        renderItems();
+      }
       itemObject.value=''; itemAmount.value=1;
       setStatus('saved');
     }
@@ -267,13 +275,12 @@
     async function updateAmount(id, delta){
       const idx = currentItems.findIndex(x => String(x.id) === String(id));
       if(idx === -1) return;
-      const newVal = Math.max(1, Number(currentItems[idx].amount || 0) + delta); // lås min = 1
+      const newVal = Math.max(1, Number(currentItems[idx].amount || 0) + delta);
 
       // Optimistic UI
       currentItems[idx].amount = newVal;
       const span = document.querySelector(`[data-val-id="${id}"]`);
       if(span) span.textContent = newVal;
-      // uppdatera minus-knapp disabled
       const decBtn = itemsBody.querySelector(`.qty-btn[data-action="dec"][data-id="${id}"]`);
       if(decBtn) decBtn.disabled = newVal <= 1;
 
@@ -282,8 +289,9 @@
         .from(TABLE)
         .update({ amount: newVal })
         .eq('id', id)
+        .eq('row', currentRow)    // säkerställ rätt rad
         .select()
-        .maybeSingle(); // <-- fix: tillåt 0/1 rader i svaret
+        .maybeSingle();
 
       if(error){
         setStatus(`update failed: ${error.message}`, true);
@@ -305,7 +313,11 @@
       if(ids.length===0){ alert('No items selected'); return; }
 
       setStatus('removing...');
-      const { error } = await supabase.from(TABLE).delete().in('id', ids);
+      const { error } = await supabase.from(TABLE)
+        .delete()
+        .in('id', ids)
+        .eq('row', currentRow);   // extra guard
+
       if(error){ setStatus(`remove failed: ${error.message}`, true); console.error(error); return; }
 
       currentItems = currentItems.filter(it => !ids.includes(String(it.id)));
@@ -325,7 +337,7 @@
       const a = document.createElement('a');
       const d = new Date();
       a.href = url;
-      a.download = `inventory-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`;
+      a.download = `inventory-${currentRow}-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     }
@@ -344,12 +356,18 @@
       const act = btn.getAttribute('data-action');
       updateAmount(id, act==='inc' ? +1 : -1);
     });
+    rowSelect.addEventListener('change', async ()=>{
+      currentRow = rowSelect.value;
+      checkAll.checked = false;
+      await loadForRow(currentRow);   // ladda endast denna rad
+    });
 
     /******** Init ********/
     (async function init(){
+      currentRow = 'ROW1';
       populateRows();
       itemDate.value = todayStr();
-      await loadAll();
+      await loadForRow(currentRow);
     })();
   </script>
 </body>
