@@ -23,15 +23,13 @@
       width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#fff;font:inherit
     }
 
-    /* Form row layout: Object | Date | Amount */
+    /* Form row: Object | Date | Amount */
     .row-grid{
       display:grid;
-      grid-template-columns: minmax(240px, 1fr) 220px 130px; /* <-- krockar inte */
+      grid-template-columns: minmax(240px, 1fr) 220px 130px;
       gap:14px;
     }
-    @media (max-width:760px){
-      .row-grid{grid-template-columns:1fr}
-    }
+    @media (max-width:760px){ .row-grid{grid-template-columns:1fr} }
 
     .btn{
       display:inline-flex;align-items:center;gap:8px;
@@ -56,6 +54,7 @@
       display:inline-flex;align-items:center;justify-content:center;
       width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;
     }
+    .qty-btn[disabled]{opacity:.5;cursor:not-allowed}
     .qty-btn svg{width:16px;height:16px}
     .qty-value{min-width:20px;text-align:center}
 
@@ -143,7 +142,7 @@
     /******** CONFIG ********/
     const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-    const TABLE = 'inventory_items'; // ändra om du byter tabellnamn
+    const TABLE = 'inventory_items'; // byt här om du ändrar tabellnamn
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -195,6 +194,7 @@
         // amount + +/- controls
         const tdAmt = document.createElement('td');
         tdAmt.className = 'amount-cell';
+
         const decBtn = document.createElement('button');
         decBtn.className = 'qty-btn';
         decBtn.setAttribute('data-action','dec');
@@ -222,6 +222,9 @@
 
         tr.appendChild(tdCheck); tr.appendChild(tdObj); tr.appendChild(tdAmt); tr.appendChild(tdDate); tr.appendChild(tdAt);
         itemsBody.appendChild(tr);
+
+        // disable minus if 1
+        decBtn.disabled = Number(it.amount ?? 0) <= 1;
       });
     }
 
@@ -251,10 +254,11 @@
       };
 
       setStatus('saving...');
-      const { data, error } = await supabase.from(TABLE).insert(newItem).select().single();
+      const { data, error } = await supabase.from(TABLE).insert(newItem).select().maybeSingle();
       if(error){ setStatus(`save failed: ${error.message}`, true); console.error('Supabase insert error:', error); return; }
 
-      currentItems.push(data);
+      // data kan vara null om RLS/RETURNING ändras; pusha vår newItem som fallback
+      currentItems.push(data || newItem);
       renderItems();
       itemObject.value=''; itemAmount.value=1;
       setStatus('saved');
@@ -263,23 +267,35 @@
     async function updateAmount(id, delta){
       const idx = currentItems.findIndex(x => String(x.id) === String(id));
       if(idx === -1) return;
-      const newVal = Math.max(0, Number(currentItems[idx].amount || 0) + delta);
+      const newVal = Math.max(1, Number(currentItems[idx].amount || 0) + delta); // lås min = 1
+
       // Optimistic UI
       currentItems[idx].amount = newVal;
       const span = document.querySelector(`[data-val-id="${id}"]`);
       if(span) span.textContent = newVal;
-      setStatus('updating amount...');
+      // uppdatera minus-knapp disabled
+      const decBtn = itemsBody.querySelector(`.qty-btn[data-action="dec"][data-id="${id}"]`);
+      if(decBtn) decBtn.disabled = newVal <= 1;
 
-      const { data, error } = await supabase.from(TABLE).update({ amount: newVal }).eq('id', id).select().single();
+      setStatus('updating amount...');
+      const { data, error } = await supabase
+        .from(TABLE)
+        .update({ amount: newVal })
+        .eq('id', id)
+        .select()
+        .maybeSingle(); // <-- fix: tillåt 0/1 rader i svaret
+
       if(error){
         setStatus(`update failed: ${error.message}`, true);
         console.error(error);
         // rollback
-        currentItems[idx].amount = Math.max(0, newVal - delta);
-        if(span) span.textContent = currentItems[idx].amount;
+        const rolled = Math.max(1, newVal - delta);
+        currentItems[idx].amount = rolled;
+        if(span) span.textContent = rolled;
+        if(decBtn) decBtn.disabled = rolled <= 1;
         return;
       }
-      currentItems[idx] = data || currentItems[idx];
+      if(data){ currentItems[idx] = { ...currentItems[idx], ...data }; }
       setStatus('updated');
     }
 
@@ -321,8 +337,6 @@
     checkAll.addEventListener('change', (e)=>{
       itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
     });
-
-    // Delegate clicks for +/-
     itemsBody.addEventListener('click', (e)=>{
       const btn = e.target.closest('.qty-btn');
       if(!btn) return;
@@ -333,8 +347,7 @@
 
     /******** Init ********/
     (async function init(){
-      rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
-      rowSelect.value = 'ROW1';
+      populateRows();
       itemDate.value = todayStr();
       await loadAll();
     })();
