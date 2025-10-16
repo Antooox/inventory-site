@@ -23,6 +23,7 @@
     }
     .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .row-3{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:14px}
+    .row-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .actions-top{display:flex;justify-content:flex-end;margin-top:10px}
     .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border:0;border-radius:10px;font-weight:700;cursor:pointer}
     .btn.primary{background:var(--primary);color:#fff}
@@ -36,7 +37,11 @@
     .qty-input{width:80px}
     .actions-row{display:flex;gap:12px;align-items:center;margin-top:12px}
     .status{color:var(--muted);font-size:13px;margin-top:10px}
+    .status.error{color:#a11}
     .right{margin-left:auto}
+    .mini{font-size:12px;color:var(--muted)}
+    .input-mini{padding:8px 10px;border:1px solid var(--border);border-radius:8px}
+    .tag{font-size:12px;background:#eef6f5;color:#0f544f;border:1px solid #d5ece9;border-radius:999px;padding:4px 8px}
   </style>
 </head>
 <body>
@@ -44,6 +49,14 @@
     <div class="card">
       <h1>Shared inventory</h1>
       <p class="sub">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
+
+      <!-- Tabell-kontroll (för att snabbt peka mot rätt tabellnamn) -->
+      <div class="row-inline" style="margin-bottom:6px">
+        <span class="mini">Table:</span>
+        <input id="tableName" class="input-mini" placeholder="inventory_items" style="min-width:220px"/>
+        <button id="applyTable" class="btn secondary">Apply</button>
+        <span id="tableDetected" class="tag" style="display:none"></span>
+      </div>
 
       <div class="row">
         <div>
@@ -118,22 +131,21 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     /***********************
-     *  CONFIG & CONSTANTS *
+     *  CONFIG & CLIENT    *
      ***********************/
-    // Din Supabase-konfig
     const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
-
-    // Byt om din tabell heter något annat
-    const TABLE = 'inventory_items';
-
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Kandidater att prova automatiskt
+    const CANDIDATE_TABLES = ['inventory_items','inventory','items','dynatag_inventory'];
 
     /**********
      *  STATE *
      **********/
     const rowsList = Array.from({length:20},(_,i)=>`ROW${i+1}`);
-    let currentItems = []; // {id,row,object,amount,added_date,added_at}
+    let TABLE = null;           // sätts dynamiskt
+    let currentItems = [];      // {id,row,object,amount,added_date,added_at}
 
     /********
      *  UI  *
@@ -150,7 +162,15 @@
     const exportBtn  = document.getElementById('exportCsvBtn');
     const statusEl   = document.getElementById('status');
 
-    const setStatus = (s) => { console.log('[STATUS]', s); statusEl.textContent = `Status: ${s}`; };
+    const tableNameInput = document.getElementById('tableName');
+    const applyTableBtn  = document.getElementById('applyTable');
+    const tableDetected  = document.getElementById('tableDetected');
+
+    const setStatus = (s, isError=false) => {
+      statusEl.textContent = `Status: ${s}`;
+      statusEl.classList.toggle('error', !!isError);
+      console.log('[STATUS]', s);
+    };
     const todayStr  = () => new Date().toISOString().slice(0,10);
 
     function populateRows(){
@@ -185,29 +205,82 @@
     }
 
     /*****************
+     *  TABLE RESOLVE *
+     *****************/
+    async function tableExists(name){
+      try{
+        const { error } = await supabase.from(name).select('id', { count: 'exact', head: true });
+        if(error){
+          // om tabellen inte finns brukar feltexten nämna "schema cache"/"relation does not exist"
+          const msg = (error && (error.message || error.toString())) || '';
+          if(/does not exist|schema cache|invalid input syntax|not found/i.test(msg)) return false;
+          // andra fel (t.ex. RLS) betyder att tabellen FINNS men är skyddad
+          return true;
+        }
+        return true;
+      }catch(e){ return false; }
+    }
+
+    async function resolveTable(){
+      // 1) använd sparat namn om finns
+      const saved = localStorage.getItem('inv_table_name');
+      if(saved){
+        if(await tableExists(saved)){ setTable(saved, true); return saved; }
+      }
+      // 2) använd input om användaren redan skrivit in
+      const typed = tableNameInput.value.trim();
+      if(typed){
+        if(await tableExists(typed)){ setTable(typed, true); return typed; }
+      }
+      // 3) prova kandidater
+      for(const t of CANDIDATE_TABLES){
+        if(await tableExists(t)){ setTable(t, true); return t; }
+      }
+      // 4) ge upp – be användaren mata in
+      setStatus(`no table found – set a valid table name above and click Apply`, true);
+      setTable('inventory_items', false);
+      return null;
+    }
+
+    function setTable(name, detected){
+      TABLE = name;
+      tableNameInput.value = name;
+      tableDetected.textContent = detected ? `using: ${name}` : `suggested: ${name}`;
+      tableDetected.style.display = 'inline-block';
+      if(detected) { localStorage.setItem('inv_table_name', name); }
+    }
+
+    /*****************
      *  SUPABASE IO  *
      *****************/
     async function loadAll(){
-      setStatus('loading...');
+      if(!TABLE){ setStatus('no table selected', true); return; }
+      setStatus(`loading from "${TABLE}"...`);
       const { data, error } = await supabase
         .from(TABLE)
         .select('*')
         .order('added_at', { ascending: true });
 
-      if(error){ setStatus(`error loading: ${error.message}`); console.error(error); return; }
+      if(error){
+        setStatus(`error loading: ${error.message}`, true);
+        console.error(error);
+        return;
+      }
       currentItems = Array.isArray(data) ? data : [];
       renderItems();
       setStatus('ready');
     }
 
     async function addItem(){
+      if(!TABLE){ setStatus('no table selected', true); return; }
+
       const obj = itemObject.value.trim();
       if(!obj){ alert('Enter an object name'); return; }
       const dateVal = itemDate.value || todayStr();
       const amountVal = Number(itemAmount.value) || 1;
 
       const newItem = {
-        id: (crypto?.randomUUID?.() || String(Date.now())), // säkra id om DB saknar default
+        id: (crypto?.randomUUID?.() || String(Date.now())),
         row: rowSelect.value,
         object: obj,
         amount: amountVal,
@@ -223,25 +296,26 @@
         .single();
 
       if(error){
-        setStatus(`save failed: ${error.message}`);
+        setStatus(`save failed: ${error.message}`, true);
         console.error('Supabase insert error:', error);
         return;
       }
 
       currentItems.push(data);
       renderItems();
-      itemObject.value=''; itemAmount.value=1; // behåll datum
+      itemObject.value=''; itemAmount.value=1;
       setStatus('saved');
     }
 
     async function removeSelected(){
+      if(!TABLE){ setStatus('no table selected', true); return; }
       const checks = Array.from(itemsBody.querySelectorAll('input[type=checkbox]:checked'));
       const ids = checks.map(c=>c.dataset.id);
       if(ids.length===0){ alert('No items selected'); return; }
 
       setStatus('removing...');
       const { error } = await supabase.from(TABLE).delete().in('id', ids);
-      if(error){ setStatus(`remove failed: ${error.message}`); console.error(error); return; }
+      if(error){ setStatus(`remove failed: ${error.message}`, true); console.error(error); return; }
 
       currentItems = currentItems.filter(it => !ids.includes(String(it.id)));
       renderItems();
@@ -277,13 +351,26 @@
       itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
     });
 
+    applyTableBtn.addEventListener('click', async ()=>{
+      const name = tableNameInput.value.trim();
+      if(!name){ return; }
+      if(await tableExists(name)){
+        setTable(name, true);
+        await loadAll();
+      }else{
+        setTable(name, false);
+        setStatus(`table "${name}" not found – check name or create it`, true);
+      }
+    });
+
     /*********
      * INIT  *
      *********/
-    (function init(){
+    (async function init(){
       populateRows();
       itemDate.value = todayStr();
-      loadAll();
+      await resolveTable();   // försök hitta tabellen automatiskt
+      await loadAll();        // ladda om den finns / annars visas statusfelt
     })();
   </script>
 </body>
