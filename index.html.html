@@ -4,19 +4,17 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Shared inventory</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net"/>
   <style>
     :root{
       --bg:#f7faf9; --card:#ffffff; --muted:#6b7b7a;
       --primary:#0f8f83; --primary-weak:#e8f2f1;
       --danger:#b02a2a; --danger-weak:#f6e8e8;
-      --border:#e6eeec; --text:#0f1f1e;
-      --radius:14px;
+      --border:#e6eeec; --text:#0f1f1e; --radius:14px;
     }
     html,body{height:100%}
     body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
     .wrap{max-width:980px;margin:28px auto;padding:0 16px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 22px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
     h1{margin:0 0 6px 0;font-size:38px;font-weight:800;letter-spacing:.2px}
     p.sub{margin:0 0 22px 0;color:var(--muted)}
     label{display:block;font-weight:700;margin:14px 0 6px}
@@ -35,7 +33,7 @@
     thead th{text-align:left;font-size:14px;color:var(--muted);border-bottom:1px solid var(--border);padding:10px 10px}
     tbody td{padding:12px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
     tbody tr:last-child td{border-bottom:0}
-    .qty-input{width:70px}
+    .qty-input{width:80px}
     .actions-row{display:flex;gap:12px;align-items:center;margin-top:12px}
     .status{color:var(--muted);font-size:13px;margin-top:10px}
     .right{margin-left:auto}
@@ -82,7 +80,7 @@
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
+            <th style="width:40px;"><input type="checkbox" id="checkAll" title="Select all"/></th>
             <th>Object</th>
             <th style="width:110px;">Amount</th>
             <th style="width:160px;">Added date</th>
@@ -119,30 +117,40 @@
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // === Supabase config (din) ===
+    /***********************
+     *  CONFIG & CONSTANTS *
+     ***********************/
+    // Din Supabase-konfig
     const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
 
+    // Byt om din tabell heter något annat
+    const TABLE = 'inventory_items';
+
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // === State ===
+    /**********
+     *  STATE *
+     **********/
     const rowsList = Array.from({length:20},(_,i)=>`ROW${i+1}`);
     let currentItems = []; // {id,row,object,amount,added_date,added_at}
 
-    // === UI refs ===
-    const rowSelect      = document.getElementById('rowSelect');
-    const itemObject     = document.getElementById('itemObject');
-    const itemAmount     = document.getElementById('itemAmount');
-    const itemDate       = document.getElementById('itemDate');
-    const addBtn         = document.getElementById('addBtn');
-    const itemsBody      = document.getElementById('itemsBody');
-    const removeBtn      = document.getElementById('removeSelectedBtn');
-    const exportBtn      = document.getElementById('exportCsvBtn');
-    const checkAll       = document.getElementById('checkAll');
-    const statusEl       = document.getElementById('status');
+    /********
+     *  UI  *
+     ********/
+    const rowSelect  = document.getElementById('rowSelect');
+    const itemObject = document.getElementById('itemObject');
+    const itemAmount = document.getElementById('itemAmount');
+    const itemDate   = document.getElementById('itemDate');
+    const addBtn     = document.getElementById('addBtn');
 
-    // === Helpers ===
-    const setStatus = (s) => statusEl.textContent = `Status: ${s}`;
+    const itemsBody  = document.getElementById('itemsBody');
+    const checkAll   = document.getElementById('checkAll');
+    const removeBtn  = document.getElementById('removeSelectedBtn');
+    const exportBtn  = document.getElementById('exportCsvBtn');
+    const statusEl   = document.getElementById('status');
+
+    const setStatus = (s) => { console.log('[STATUS]', s); statusEl.textContent = `Status: ${s}`; };
     const todayStr  = () => new Date().toISOString().slice(0,10);
 
     function populateRows(){
@@ -157,7 +165,7 @@
 
     function renderItems(){
       itemsBody.innerHTML = '';
-      currentItems.forEach((it, idx)=>{
+      currentItems.forEach(it=>{
         const tr = document.createElement('tr');
 
         const tdCheck = document.createElement('td');
@@ -166,36 +174,27 @@
         cb.dataset.id = it.id;
         tdCheck.appendChild(cb);
 
-        const tdObj = document.createElement('td');
-        tdObj.textContent = it.object ?? '';
+        const tdObj = document.createElement('td');  tdObj.textContent = it.object ?? '';
+        const tdAmt = document.createElement('td');  tdAmt.textContent = Number(it.amount ?? 0);
+        const tdDate= document.createElement('td');  tdDate.textContent = it.added_date ?? '';
+        const tdAt  = document.createElement('td');  tdAt.textContent = it.added_at ? new Date(it.added_at).toLocaleString() : '';
 
-        const tdAmt = document.createElement('td');
-        tdAmt.textContent = Number(it.amount ?? 0);
-
-        const tdDate = document.createElement('td');
-        tdDate.textContent = (it.added_date ?? '') || '';
-
-        const tdAt = document.createElement('td');
-        tdAt.textContent = it.added_at ? new Date(it.added_at).toLocaleString() : '';
-
-        tr.appendChild(tdCheck);
-        tr.appendChild(tdObj);
-        tr.appendChild(tdAmt);
-        tr.appendChild(tdDate);
-        tr.appendChild(tdAt);
+        tr.appendChild(tdCheck); tr.appendChild(tdObj); tr.appendChild(tdAmt); tr.appendChild(tdDate); tr.appendChild(tdAt);
         itemsBody.appendChild(tr);
       });
     }
 
-    // === Supabase I/O ===
+    /*****************
+     *  SUPABASE IO  *
+     *****************/
     async function loadAll(){
       setStatus('loading...');
       const { data, error } = await supabase
-        .from('inventory_items')
+        .from(TABLE)
         .select('*')
         .order('added_at', { ascending: true });
 
-      if(error){ setStatus('error loading'); console.error(error); return; }
+      if(error){ setStatus(`error loading: ${error.message}`); console.error(error); return; }
       currentItems = Array.isArray(data) ? data : [];
       renderItems();
       setStatus('ready');
@@ -204,11 +203,11 @@
     async function addItem(){
       const obj = itemObject.value.trim();
       if(!obj){ alert('Enter an object name'); return; }
-
       const dateVal = itemDate.value || todayStr();
       const amountVal = Number(itemAmount.value) || 1;
 
       const newItem = {
+        id: (crypto?.randomUUID?.() || String(Date.now())), // säkra id om DB saknar default
         row: rowSelect.value,
         object: obj,
         amount: amountVal,
@@ -218,15 +217,20 @@
 
       setStatus('saving...');
       const { data, error } = await supabase
-        .from('inventory_items')
+        .from(TABLE)
         .insert(newItem)
         .select()
         .single();
 
-      if(error){ setStatus('save failed'); console.error(error); return; }
+      if(error){
+        setStatus(`save failed: ${error.message}`);
+        console.error('Supabase insert error:', error);
+        return;
+      }
+
       currentItems.push(data);
       renderItems();
-      itemObject.value=''; itemAmount.value=1; // keep date
+      itemObject.value=''; itemAmount.value=1; // behåll datum
       setStatus('saved');
     }
 
@@ -236,27 +240,20 @@
       if(ids.length===0){ alert('No items selected'); return; }
 
       setStatus('removing...');
-      const { error } = await supabase
-        .from('inventory_items')
-        .delete()
-        .in('id', ids);
+      const { error } = await supabase.from(TABLE).delete().in('id', ids);
+      if(error){ setStatus(`remove failed: ${error.message}`); console.error(error); return; }
 
-      if(error){ setStatus('remove failed'); console.error(error); return; }
       currentItems = currentItems.filter(it => !ids.includes(String(it.id)));
       renderItems();
-      setStatus('removed');
       checkAll.checked = false;
+      setStatus('removed');
     }
 
     function exportCSV(items){
       if(!Array.isArray(items) || items.length===0){ alert('Nothing to export'); return; }
       const headers = ['row','object','amount','added_date','added_at'];
       const rows = items.map(it => [
-        it.row ?? '',
-        it.object ?? '',
-        it.amount ?? 0,
-        it.added_date ?? '',
-        it.added_at ?? ''
+        it.row ?? '', it.object ?? '', it.amount ?? 0, it.added_date ?? '', it.added_at ?? ''
       ]);
       const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
       const csv = [headers.join(','), ...rows.map(r => r.map(esc).join(','))].join('\r\n');
@@ -270,7 +267,9 @@
       URL.revokeObjectURL(url);
     }
 
-    // === Wire up ===
+    /****************
+     *  WIRE UP UI  *
+     ****************/
     addBtn.addEventListener('click', addItem);
     removeBtn.addEventListener('click', removeSelected);
     exportBtn.addEventListener('click', ()=>exportCSV(currentItems));
@@ -278,7 +277,9 @@
       itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
     });
 
-    // === Init ===
+    /*********
+     * INIT  *
+     *********/
     (function init(){
       populateRows();
       itemDate.value = todayStr();
