@@ -167,7 +167,7 @@
         <select id="rowSelect" aria-label="Row"></select>
       </div>
 
-      <!-- Inputs: Object | Date | Amount | Space % (per unit) -->
+      <!-- Inputs -->
       <div class="row-grid" style="margin-top:12px">
         <div>
           <label for="itemObject">Object</label>
@@ -208,7 +208,7 @@
               <th class="col-added-at" style="width:230px;">Added at</th>
             </tr>
           </thead>
-            <tbody id="itemsBody"></tbody>
+          <tbody id="itemsBody"></tbody>
         </table>
       </div>
 
@@ -251,7 +251,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /******** AUTH ********/
+  (function(){  /* -------- IIFE: isolerar alla variabler, förhindrar redeclare -------- */
+
+    /* AUTH */
     const FIXED_USER = 'stegra-logistics';
     const FIXED_PASS_SHA256 = 'b2320acb7841b387c0ad4c23bb5c41d559fe8d1192816f2c54fad279e8a8a3e6'; // "Stegra123"
 
@@ -280,7 +282,7 @@
     logoutBtn.addEventListener('click',doLogout);
     window.addEventListener('DOMContentLoaded',()=>{ try{ const s=JSON.parse(localStorage.getItem('inv_auth')||'{}'); if(s.u===FIXED_USER){ setAuthedUI(true); startApp(); return; } }catch{} setAuthedUI(false); });
 
-    /******** APP ********/
+    /* APP */
     const SUPABASE_URL='https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
     const TABLE='inventory_items';
@@ -312,6 +314,7 @@
     const dashCanvas=document.getElementById('dashCanvas');
     const modeCapacityBtn=document.getElementById('modeCapacity');
     const modeAmountBtn=document.getElementById('modeAmount');
+    const dashboardBtn=document.getElementById('dashboardBtn');
 
     const setStatus=(s,type='neutral')=>{ statusEl.textContent=`Status: ${s}`; statusEl.classList.remove('ok','err'); if(type==='ok') statusEl.classList.add('ok'); if(type==='err') statusEl.classList.add('err'); };
     const todayStr=()=>new Date().toISOString().slice(0,10);
@@ -334,7 +337,6 @@
         tdAmt.append(dec,val,inc);
 
         const tdSpace=document.createElement('td');
-        // visa total space = per unit * amount
         const perUnit=Number(it.space_pct||0);
         const totalSpace = Number(it.amount||0) * (Number.isFinite(perUnit)? perUnit : 0);
         tdSpace.textContent = Number.isFinite(totalSpace) && totalSpace>0 ? `${totalSpace}%` : '';
@@ -450,10 +452,8 @@
         itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=e.target.checked);
       });
       itemsBody.addEventListener('click',e=>{
-        const btn=e.target.closest('.qty-btn');
-        if(btn){ updateAmount(btn.dataset.id, btn.dataset.action==='inc'? +1 : -1); return; }
-        const span=e.target.closest('.obj-text');
-        if(span){
+        const btn=e.target.closest('.qty-btn'); if(btn){ updateAmount(btn.dataset.id, btn.dataset.action==='inc'?+1:-1); return; }
+        const span=e.target.closest('.obj-text'); if(span){
           const id=span.dataset.id, old=span.textContent;
           const inp=document.createElement('input'); inp.type='text'; inp.value=old; inp.className='obj-edit';
           span.replaceWith(inp); inp.focus(); inp.select();
@@ -464,25 +464,21 @@
           inp.addEventListener('blur',save);
         }
       });
-      rowSelect.addEventListener('change',async e=>{
-        currentRow=e.target.value; localStorage.setItem('inv_row',currentRow);
-        checkAll.checked=false; await loadForRow(currentRow);
-      });
+      rowSelect.addEventListener('change',async e=>{ currentRow=e.target.value; localStorage.setItem('inv_row',currentRow); checkAll.checked=false; await loadForRow(currentRow); });
 
-      // Dashboard
-      document.getElementById('dashboardBtn').addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
+      dashboardBtn.addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
       dashClose.addEventListener('click',closeDashboard);
       dashRefresh.addEventListener('click',loadDashboard);
       dashDownload.addEventListener('click',downloadChart);
       dashBackdrop.addEventListener('click',e=>{ if(e.target===dashBackdrop) closeDashboard(); });
 
       modeCapacityBtn.addEventListener('click',()=>{ dashMode='capacity'; modeCapacityBtn.classList.add('active'); modeCapacityBtn.setAttribute('aria-selected','true'); modeAmountBtn.classList.remove('active'); modeAmountBtn.removeAttribute('aria-selected'); loadDashboard(); });
-      modeAmountBtn.addEventListener('click',()=>{ dashMode='amount';   modeAmountBtn.classList.add('active');   modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
+      modeAmountBtn.addEventListener('click',()=>{ dashMode='amount'; modeAmountBtn.classList.add('active'); modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
     }
 
     function openDashboard(){ dashBackdrop.classList.add('show'); }
     function closeDashboard(){ dashBackdrop.classList.remove('show'); if(_resize){window.removeEventListener('resize',_resize); _resize=null;} }
-    let dashData=[], _resize=null;
+    let dashData=[], _resize=null;   // ← nu INUTI IIFE, kan inte krocka
 
     async function loadDashboard(){
       try{
@@ -573,7 +569,7 @@
         }
       });
       rowSelect.addEventListener('change',async e=>{ currentRow=e.target.value; localStorage.setItem('inv_row',currentRow); checkAll.checked=false; await loadForRow(currentRow); });
-      document.getElementById('dashboardBtn').addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
+      dashboardBtn.addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
       dashClose.addEventListener('click',closeDashboard);
       dashRefresh.addEventListener('click',loadDashboard);
       dashDownload.addEventListener('click',downloadChart);
@@ -584,7 +580,6 @@
 
     function openDashboard(){ dashBackdrop.classList.add('show'); }
     function closeDashboard(){ dashBackdrop.classList.remove('show'); if(_resize){window.removeEventListener('resize',_resize); _resize=null;} }
-    let dashData=[], _resize=null;
 
     function startApp(){
       try{
@@ -598,6 +593,8 @@
       }catch(err){ console.error('startApp error',err); setStatus(`init error: ${err.message}`,'err'); }
     }
     function teardownApp(){ wired=false; itemsBody.innerHTML=''; setStatus('ready'); }
+
+  })();  /* -------- /IIFE -------- */
   </script>
 </body>
 </html>
