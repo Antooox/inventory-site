@@ -34,7 +34,6 @@
     .wrap{max-width:1040px;margin:40px auto;padding:0 20px}
     .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:28px 26px}
 
-    /* header */
     .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:12px;flex-wrap:wrap}
     .brand{display:flex;gap:14px;align-items:center;min-width:0}
     .logo-wrap{display:flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6)); border:1px solid var(--border); box-shadow:var(--shadow-sm); backdrop-filter: blur(6px); overflow:hidden; flex-shrink:0}
@@ -49,7 +48,6 @@
     }
     input:focus,select:focus{outline:none;border-color:var(--primary); box-shadow:0 0 0 4px rgb(15 143 131 / 12%)}
 
-    /* form: Object | Date | Amount */
     .row-grid{display:grid;gap:14px;grid-template-columns:minmax(260px,1fr) 220px 140px}
     @media (max-width:820px){.row-grid{grid-template-columns:1fr}}
 
@@ -86,40 +84,29 @@
     .qty-btn svg{width:16px;height:16px}
     .qty-value{min-width:22px;text-align:center;font-weight:700}
 
-    /* status chip */
     .status{display:inline-flex;align-items:center;gap:8px;margin-top:14px; font-size:13px;color:var(--muted);padding:8px 10px;border:1px solid var(--border); border-radius:999px;background:#fff}
     .status.ok{color:var(--ok);background:var(--ok-bg);border-color:#c6efe6}
     .status.err{color:var(--danger);background:var(--danger-weak);border-color:#f5cccc}
 
-    /* AUTH views */
+    /* login */
     .center{min-height:60vh;display:flex;align-items:center;justify-content:center;padding:24px}
     .login-card{max-width:460px;width:100%}
     .login-title{font-size:28px;font-weight:800;margin:0 0 6px}
     .login-sub{color:var(--muted);margin:0 0 18px}
     .error{color:var(--danger);background:var(--danger-weak);border:1px solid #f5cccc;border-radius:10px;padding:10px;margin-top:10px;display:none}
-
-    /* logo on login */
     .login-brand{display:flex;align-items:center;gap:14px;margin-bottom:12px}
     .login-logo-wrap{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6)); border:1px solid var(--border); box-shadow:var(--shadow-sm); backdrop-filter: blur(6px); overflow:hidden}
     .login-logo{max-width:100%;max-height:100%;object-fit:contain; transform:translateY(1px)}
 
-    /* DASHBOARD modal */
-    .modal-backdrop{
-      position:fixed;inset:0;background:rgba(0,0,0,.35);
-      display:none;align-items:center;justify-content:center;padding:24px;z-index:50;
-    }
-    .modal{max-width:900px;width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px}
-    .modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-    .modal h2{margin:0;font-size:24px}
-    .modal .muted{color:var(--muted);margin:0 0 12px}
-    .modal-footer{display:flex;justify-content:flex-end;margin-top:14px}
-    .chart-wrap{width:100%;height:520px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
-    .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .legend{font-size:13px;color:var(--muted)}
+    /* editable object */
+    .obj-text{cursor:text; border-radius:6px; padding:2px 4px}
+    .obj-text:hover{background:#f2fbfa; border:1px solid var(--border)}
+    .obj-edit{width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:8px; font:inherit}
+    .obj-edit:focus{outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgb(15 143 131 / 12%)}
   </style>
 </head>
 <body>
-  <!-- ===== LOGIN VIEW ===== -->
+  <!-- LOGIN -->
   <div id="loginView" class="wrap center">
     <div class="card login-card">
       <div class="login-brand">
@@ -133,7 +120,6 @@
       </div>
 
       <label for="loginUser">Username</label>
-      <!-- empty field: no placeholder, no hint -->
       <input id="loginUser" type="text" autocomplete="username"/>
 
       <label for="loginPass">Password</label>
@@ -141,7 +127,6 @@
 
       <div class="actions-top">
         <button id="loginBtn" class="btn primary">
-          <!-- lock icon -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v9H6z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Sign in</span>
         </button>
@@ -151,7 +136,7 @@
     </div>
   </div>
 
-  <!-- ===== APP VIEW ===== -->
+  <!-- APP -->
   <div id="appView" class="wrap" style="display:none">
     <div class="card">
       <div class="header">
@@ -166,25 +151,21 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button id="dashboardBtn" class="btn link" title="Open dashboard">
-            <!-- chart icon -->
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15v3m5-8v11m5-14v14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
             <span>Dashboard</span>
           </button>
           <button id="logoutBtn" class="btn secondary" title="Sign out">
-            <!-- logout icon -->
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 12H3m6-6L3 12l6 6M21 3v18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span>Logout</span>
           </button>
         </div>
       </div>
 
-      <!-- Row selector -->
       <div>
         <label for="rowSelect">Select row</label>
         <select id="rowSelect" aria-label="Row"></select>
       </div>
 
-      <!-- Inputs -->
       <div class="row-grid" style="margin-top:12px">
         <div>
           <label for="itemObject">Object</label>
@@ -202,10 +183,7 @@
 
       <div class="actions-top">
         <button id="addBtn" class="btn primary" title="Add to list">
-          <!-- PLUS -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
-          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
           <span>Add to list</span>
         </button>
         <span></span>
@@ -228,19 +206,13 @@
 
       <div class="actions-row">
         <button id="removeSelectedBtn" class="btn danger" title="Remove selected">
-          <!-- MINUS -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
-          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
           <span>Remove selected</span>
         </button>
 
         <div class="right">
           <button id="exportCsvBtn" class="btn secondary" title="Export CSV">
-            <!-- EXPORT -->
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3v10m0 0l-3-3m3 3l3-3M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3v10m0 0l-3-3m3 3l3-3M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span>Export CSV</span>
           </button>
         </div>
@@ -250,18 +222,17 @@
     </div>
   </div>
 
-  <!-- ===== DASHBOARD (BAR CHART) ===== -->
+  <!-- DASHBOARD -->
   <div id="dashBackdrop" class="modal-backdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dashTitle">
       <div class="modal-header">
         <h2 id="dashTitle">Inventory dashboard</h2>
         <button id="dashClose" class="btn secondary" title="Close">Close</button>
       </div>
-      <p class="muted">Total amount per row. Bars are <b>relative to the largest row</b> (no fixed maximum).</p>
+      <p class="muted">Total amount per row. Bars are <b>relative to the largest row</b>.</p>
       <div class="chart-header">
         <span class="legend" id="dashSummary">Loading…</span>
         <button id="dashRefresh" class="btn link" title="Reload data">
-          <!-- refresh icon -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
           Refresh
         </button>
@@ -271,7 +242,6 @@
       </div>
       <div class="modal-footer">
         <button id="dashDownload" class="btn link" title="Save chart as PNG">
-          <!-- download icon -->
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3v12m0 0l4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Download PNG
         </button>
@@ -279,14 +249,11 @@
     </div>
   </div>
 
-  <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /******** SIMPLE AUTH (client-side gate) ********/
-    // Case-insensitive: store constant in lowercase, compare with input.toLowerCase()
-    const FIXED_USER = 'stegra-logistics';
-    // SHA-256 hash of "Stegra123"
-    const FIXED_PASS_SHA256 = 'b2320acb7841b387c0ad4c23bb5c41d559fe8d1192816f2c54fad279e8a8a3e6';
+    /* ---- SIMPLE AUTH (client-gate) ---- */
+    const FIXED_USER = 'stegra-logistics'; // case-insensitive
+    const FIXED_PASS_SHA256 = 'b2320acb7841b387c0ad4c23bb5c41d559fe8d1192816f2c54fad279e8a8a3e6'; // "Stegra123"
 
     const loginView = document.getElementById('loginView');
     const appView   = document.getElementById('appView');
@@ -327,7 +294,6 @@
     loginPass.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doLogin(); }});
     logoutBtn.addEventListener('click', doLogout);
 
-    // Boot
     (function boot(){
       try{
         const s = JSON.parse(localStorage.getItem('inv_auth') || '{}');
@@ -336,7 +302,7 @@
       setAuthedUI(false);
     })();
 
-    /******** APP LOGIC ********/
+    /* ---- APP ---- */
     const SUPABASE_URL = 'https://xlgjmznrifbshgcrzjyi.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsZ2ptem5yaWZic2hnY3J6anlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NzE1MDYsImV4cCI6MjA3NjA0NzUwNn0.azm1He9moLcyAeXVlyd4SLnms-AL_2ET5_41-kviugY';
     const TABLE = 'inventory_items';
@@ -348,7 +314,7 @@
     let currentRow = 'ROW1';
     let currentItems = [];
 
-    // DOM refs
+    // DOM
     const rowSelect  = document.getElementById('rowSelect');
     const itemObject = document.getElementById('itemObject');
     const itemAmount = document.getElementById('itemAmount');
@@ -382,31 +348,25 @@
         tdCheck.appendChild(cb);
 
         const tdObj = document.createElement('td');
-        tdObj.textContent = it.object ?? '';
+        const objSpan = document.createElement('span');
+        objSpan.className = 'obj-text';
+        objSpan.dataset.id = it.id;
+        objSpan.textContent = it.object ?? '';
+        tdObj.appendChild(objSpan);
 
         const tdAmt = document.createElement('td');
         tdAmt.className = 'amount-cell';
-
         const decBtn = document.createElement('button');
         decBtn.className = 'qty-btn';
-        decBtn.setAttribute('data-action','dec');
-        decBtn.setAttribute('data-id', it.id);
+        decBtn.dataset.action='dec'; decBtn.dataset.id = it.id;
         decBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
-
         const valSpan = document.createElement('span');
-        valSpan.className = 'qty-value';
-        valSpan.setAttribute('data-val-id', it.id);
+        valSpan.className='qty-value'; valSpan.dataset.valId = it.id;
         valSpan.textContent = Number(it.amount ?? 0);
-
         const incBtn = document.createElement('button');
-        incBtn.className = 'qty-btn';
-        incBtn.setAttribute('data-action','inc');
-        incBtn.setAttribute('data-id', it.id);
+        incBtn.className='qty-btn'; incBtn.dataset.action='inc'; incBtn.dataset.id = it.id;
         incBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
-
-        tdAmt.appendChild(decBtn);
-        tdAmt.appendChild(valSpan);
-        tdAmt.appendChild(incBtn);
+        tdAmt.append(decBtn,valSpan,incBtn);
 
         const tdDate= document.createElement('td');
         tdDate.textContent = it.added_date ?? '';
@@ -414,7 +374,7 @@
         const tdAt  = document.createElement('td');
         tdAt.textContent = it.added_at ? new Date(it.added_at).toLocaleString() : '';
 
-        tr.appendChild(tdCheck); tr.appendChild(tdObj); tr.appendChild(tdAmt); tr.appendChild(tdDate); tr.appendChild(tdAt);
+        tr.append(tdCheck, tdObj, tdAmt, tdDate, tdAt);
         itemsBody.appendChild(tr);
 
         decBtn.disabled = Number(it.amount ?? 0) <= 1;
@@ -434,35 +394,30 @@
     }
 
     async function addItem(){
-      try{
-        const obj = (itemObject.value || '').trim();
-        if(!obj){ alert('Enter an object name'); return; }
-        const dateVal = itemDate.value || todayStr();
-        const amountVal = Math.max(1, Number(itemAmount.value) || 1);
+      const obj = (itemObject.value || '').trim();
+      if(!obj){ alert('Enter an object name'); return; }
+      const dateVal = itemDate.value || todayStr();
+      const amountVal = Math.max(1, Number(itemAmount.value) || 1);
 
-        const newItem = {
-          id: (crypto?.randomUUID?.() || String(Date.now())),
-          row: currentRow,
-          object: obj,
-          amount: amountVal,
-          added_date: dateVal,
-          added_at: new Date().toISOString()
-        };
+      const newItem = {
+        id: (crypto?.randomUUID?.() || String(Date.now())),
+        row: currentRow,
+        object: obj,
+        amount: amountVal,
+        added_date: dateVal,
+        added_at: new Date().toISOString()
+      };
 
-        setStatus('saving...');
-        const { data, error } = await supabase.from(TABLE).insert(newItem).select().maybeSingle();
-        if(error){ setStatus(`save failed: ${error.message}`,'err'); console.error('insert error', error); return; }
+      setStatus('saving...');
+      const { data, error } = await supabase.from(TABLE).insert(newItem).select().maybeSingle();
+      if(error){ setStatus(`save failed: ${error.message}`,'err'); console.error(error); return; }
 
-        if(currentRow === newItem.row){
-          currentItems.push(data || newItem);
-          renderItems();
-        }
-        itemObject.value=''; itemAmount.value=1;
-        setStatus('saved','ok');
-      }catch(err){
-        console.error(err);
-        setStatus('save failed: unexpected error','err');
+      if(currentRow === newItem.row){
+        currentItems.push(data || newItem);
+        renderItems();
       }
+      itemObject.value=''; itemAmount.value=1;
+      setStatus('saved','ok');
     }
 
     async function updateAmount(id, delta){
@@ -470,23 +425,43 @@
       if(idx === -1) return;
       const newVal = Math.max(1, Number(currentItems[idx].amount || 0) + delta);
 
-      // optimistic UI
-      currentItems[idx].amount = newVal;
+      currentItems[idx].amount = newVal;  // optimistic
       renderItems();
 
       setStatus('updating amount...');
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from(TABLE).update({ amount: newVal })
-        .eq('id', id).eq('row', currentRow)
-        .select().maybeSingle();
-
+        .eq('id', id).eq('row', currentRow);
       if(error){
         setStatus(`update failed: ${error.message}`,'err');
-        currentItems[idx].amount = Math.max(1, newVal - delta);
+        currentItems[idx].amount = Math.max(1, newVal - delta); // revert
         renderItems();
         return;
       }
-      if(data){ currentItems[idx] = { ...currentItems[idx], ...data }; }
+      setStatus('updated','ok');
+    }
+
+    async function renameObject(id, newName, revert){
+      const idx = currentItems.findIndex(x => String(x.id) === String(id));
+      if(idx === -1) return;
+      const old = currentItems[idx].object || '';
+      const name = (newName || '').trim();
+      if(name === '' || name === old){ revert(old); return; }
+
+      // optimistic
+      currentItems[idx].object = name;
+      renderItems();
+
+      setStatus('renaming...');
+      const { error } = await supabase
+        .from(TABLE).update({ object: name })
+        .eq('id', id).eq('row', currentRow);
+      if(error){
+        currentItems[idx].object = old; // revert
+        renderItems();
+        setStatus(`rename failed: ${error.message}`,'err');
+        return;
+      }
       setStatus('updated','ok');
     }
 
@@ -508,7 +483,7 @@
     function exportCSV(items){
       if(!Array.isArray(items) || items.length===0){ alert('Nothing to export'); return; }
       const headers = ['row','object','amount','added_date','added_at'];
-      const rows = items.map(it => [ it.row ?? '', it.object ?? '', it.amount ?? 0, it.added_date ?? '', it.added_at ?? '' ]);
+      const rows = items.map(it => [it.row ?? '', it.object ?? '', it.amount ?? 0, it.added_date ?? '', it.added_at ?? '']);
       const esc = v => `"${String(v ?? '').replace(/"/g,'""')}"`;
       const csv = [headers.join(','), ...rows.map(r => r.map(esc).join(','))].join('\r\n');
       const blob = new Blob(["\uFEFF"+csv], { type:'text/csv;charset=utf-8;' });
@@ -521,7 +496,6 @@
       URL.revokeObjectURL(url);
     }
 
-    // wire main events
     function wireMainEvents(){
       addBtn.addEventListener('click', addItem);
       removeBtn.addEventListener('click', removeSelected);
@@ -529,13 +503,45 @@
       checkAll.addEventListener('change', (e)=>{
         itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
       });
+
+      // plus/minus
       itemsBody.addEventListener('click', (e)=>{
         const btn = e.target.closest('.qty-btn');
         if(!btn) return;
-        const id = btn.getAttribute('data-id');
-        const act = btn.getAttribute('data-action');
+        const id = btn.dataset.id;
+        const act = btn.dataset.action;
         updateAmount(id, act==='inc' ? +1 : -1);
       });
+
+      // inline rename
+      itemsBody.addEventListener('click', (e)=>{
+        const span = e.target.closest('.obj-text');
+        if(!span) return;
+
+        const id = span.dataset.id;
+        const oldText = span.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = oldText;
+        input.className = 'obj-edit';
+
+        // replace span with input
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const revert = (txt)=>{ input.replaceWith(Object.assign(document.createElement('span'), {className:'obj-text', dataset:{id}, textContent:txt})); };
+
+        const save = ()=> renameObject(id, input.value, revert);
+        const cancel = ()=> revert(oldText);
+
+        input.addEventListener('keydown', (ev)=>{
+          if(ev.key === 'Enter'){ ev.preventDefault(); save(); }
+          else if(ev.key === 'Escape'){ ev.preventDefault(); cancel(); }
+        });
+        input.addEventListener('blur', save);
+      });
+
       rowSelect.addEventListener('change', async (e)=>{
         currentRow = e.target.value;
         checkAll.checked = false;
@@ -543,132 +549,52 @@
       });
     }
 
-    /******** DASHBOARD (BAR CHART) ********/
+    /* ---- Dashboard (same as before) ---- */
     const dashBackdrop = document.getElementById('dashBackdrop');
-    const dashOpen     = document.getElementById('dashboardBtn');
     const dashClose    = document.getElementById('dashClose');
     const dashRefresh  = document.getElementById('dashRefresh');
     const dashDownload = document.getElementById('dashDownload');
     const dashSummary  = document.getElementById('dashSummary');
     const dashCanvas   = document.getElementById('dashCanvas');
-    let dashData = []; // [{row, amount}]
-    let resizeHandler = null;
+    let dashData = []; let resizeHandler = null;
 
     function openDashboard(){ dashBackdrop.style.display = 'flex'; }
     function closeDashboard(){ dashBackdrop.style.display = 'none'; if(resizeHandler){ window.removeEventListener('resize', resizeHandler); resizeHandler=null; } }
+    document.getElementById('dashboardBtn').addEventListener('click', async () => { openDashboard(); await loadDashboard(); });
+    dashClose.addEventListener('click', closeDashboard);
+    dashRefresh.addEventListener('click', loadDashboard);
+    dashDownload.addEventListener('click', ()=>{ const a=document.createElement('a'); a.download=`inventory-dashboard-${new Date().toISOString().slice(0,10)}.png`; a.href=dashCanvas.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); });
+    dashBackdrop.addEventListener('click', (e)=>{ if(e.target === dashBackdrop) closeDashboard(); });
 
     async function loadDashboard(){
       setStatus('loading dashboard...');
-      const { data, error } = await supabase
-        .from(TABLE).select('row,amount');
+      const { data, error } = await supabase.from(TABLE).select('row,amount');
       if(error){ setStatus(`dashboard error: ${error.message}`,'err'); console.error(error); return; }
-
-      // Aggregate totals per row
-      const agg = {};
-      for(const r of rowsList) agg[r] = 0;
-      for(const it of (data||[])){
-        const r = it.row || 'UNKNOWN';
-        if(!(r in agg)) agg[r] = 0;
-        agg[r] += Number(it.amount || 0);
-      }
-      dashData = Object.entries(agg).map(([row, amount]) => ({row, amount}));
-      dashData.sort((a,b)=>b.amount-a.amount);
-
-      const total = dashData.reduce((s,x)=>s+x.amount,0);
-      dashSummary.textContent = `Rows: ${dashData.length} • Total amount: ${total}`;
-
-      drawBarChart();
-      if(!resizeHandler){
-        resizeHandler = () => drawBarChart();
-        window.addEventListener('resize', resizeHandler);
-      }
+      const agg={}; for(const r of rowsList) agg[r]=0;
+      for(const it of (data||[])){ const r=it.row||'UNKNOWN'; if(!(r in agg)) agg[r]=0; agg[r]+=Number(it.amount||0); }
+      dashData = Object.entries(agg).map(([row,amount])=>({row,amount})).sort((a,b)=>b.amount-a.amount);
+      dashSummary.textContent = `Rows: ${dashData.length} • Total amount: ${dashData.reduce((s,x)=>s+x.amount,0)}`;
+      drawBarChart(); if(!resizeHandler){ resizeHandler=()=>drawBarChart(); window.addEventListener('resize',resizeHandler); }
       setStatus('dashboard ready','ok');
     }
-
     function drawBarChart(){
-      const ctx = dashCanvas.getContext('2d');
-      const parent = dashCanvas.parentElement;
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      const paddingLeft = 100, paddingRight = 24, paddingTop = 24, paddingBottom = 24;
-      const barGap = 10, barHeight = 22;
-
-      const count = dashData.length;
-      const neededHeight = paddingTop + paddingBottom + count*barHeight + Math.max(0,(count-1))*barGap;
-
-      const cssW = Math.max(300, parent.clientWidth);
-      const cssH = Math.max(260, Math.min(720, neededHeight));
-      dashCanvas.style.width = cssW + 'px';
-      dashCanvas.style.height = cssH + 'px';
-      dashCanvas.width = Math.floor(cssW * dpr);
-      dashCanvas.height = Math.floor(cssH * dpr);
-
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0,0,cssW,cssH);
-
-      ctx.font = '13px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif';
-      ctx.fillStyle = '#0e1f1e';
-
-      const maxAmount = Math.max(1, ...dashData.map(x=>x.amount));
-      const chartW = cssW - paddingLeft - paddingRight;
-
-      // y-axis line
-      ctx.strokeStyle = '#e5eeec';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(paddingLeft, paddingTop-6);
-      ctx.lineTo(paddingLeft, cssH - paddingBottom);
-      ctx.stroke();
-
-      dashData.forEach((d,i)=>{
-        const y = paddingTop + i*(barHeight+barGap);
-        // label
-        ctx.fillStyle = '#3b4746';
-        ctx.textAlign = 'left';
-        ctx.fillText(d.row, 12, y + barHeight - 6);
-        // bar (relative to largest row)
-        const w = maxAmount === 0 ? 0 : Math.round((d.amount / maxAmount) * chartW);
-        ctx.fillStyle = '#0f8f83';
-        roundRect(ctx, paddingLeft, y, w, barHeight, 6, true, false);
-        // value text
-        ctx.fillStyle = '#0e1f1e';
-        ctx.fillText(String(d.amount), paddingLeft + w + 6, y + barHeight - 6);
-      });
-
-      function roundRect(ctx, x, y, w, h, r, fill, stroke){
-        if (w<=0 || h<=0) return;
-        if (r > h/2) r = h/2;
-        if (r > w/2) r = w/2;
-        ctx.beginPath();
-        ctx.moveTo(x+r, y);
-        ctx.arcTo(x+w, y, x+w, y+h, r);
-        ctx.arcTo(x+w, y+h, x, y+h, r);
-        ctx.arcTo(x, y+h, x, y, r);
-        ctx.arcTo(x, y, x+w, y, r);
-        ctx.closePath();
-        if (fill) ctx.fill();
-        if (stroke) ctx.stroke();
-      }
+      const ctx = dashCanvas.getContext('2d'), parent = dashCanvas.parentElement, dpr = Math.max(1, window.devicePixelRatio||1);
+      const padL=100,padR=24,padT=24,padB=24, gap=10, barH=22;
+      const count=dashData.length, needH=padT+padB+count*barH+Math.max(0,(count-1))*gap;
+      const cssW = Math.max(300, parent.clientWidth), cssH = Math.max(260, Math.min(720, needH));
+      dashCanvas.style.width=cssW+'px'; dashCanvas.style.height=cssH+'px'; dashCanvas.width=Math.floor(cssW*dpr); dashCanvas.height=Math.floor(cssH*dpr);
+      ctx.scale(dpr,dpr); ctx.clearRect(0,0,cssW,cssH); ctx.font='13px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif';
+      const maxAmt = Math.max(1, ...dashData.map(x=>x.amount)), chartW = cssW - padL - padR;
+      ctx.strokeStyle='#e5eeec'; ctx.beginPath(); ctx.moveTo(padL,padT-6); ctx.lineTo(padL,cssH-padB); ctx.stroke();
+      dashData.forEach((d,i)=>{ const y=padT+i*(barH+gap); ctx.fillStyle='#3b4746'; ctx.textAlign='left'; ctx.fillText(d.row,12,y+barH-6);
+        const w= maxAmt===0?0:Math.round((d.amount/maxAmt)*chartW); ctx.fillStyle='#0f8f83'; roundRect(ctx,padL,y,w,barH,6,true,false);
+        ctx.fillStyle='#0e1f1e'; ctx.fillText(String(d.amount), padL+w+6, y+barH-6); });
+      function roundRect(ctx,x,y,w,h,r,fill,stroke){ if(w<=0||h<=0) return; if(r>h/2) r=h/2; if(r>w/2) r=w/2; ctx.beginPath();
+        ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke(); }
     }
 
-    function downloadChart(){
-      const link = document.createElement('a');
-      link.download = `inventory-dashboard-${new Date().toISOString().slice(0,10)}.png`;
-      link.href = dashCanvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-
-    // open/close/refresh
-    document.getElementById('dashboardBtn').addEventListener('click', async () => { openDashboard(); await loadDashboard(); });
-    document.getElementById('dashClose').addEventListener('click', closeDashboard);
-    document.getElementById('dashRefresh').addEventListener('click', loadDashboard);
-    document.getElementById('dashDownload').addEventListener('click', downloadChart);
-    document.getElementById('dashBackdrop').addEventListener('click', (e)=>{ if(e.target === dashBackdrop) closeDashboard(); });
-
-    /******** INIT ********/
+    /* INIT */
     async function initApp(){
-      // rows + defaults
       rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
       rowSelect.value = currentRow;
       itemDate.value = todayStr();
