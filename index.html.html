@@ -59,6 +59,8 @@
     .btn.primary:hover{background:var(--primary-600);transform:translateY(-1px)}
     .btn.secondary{background:var(--primary-weak);color:var(--primary)}
     .btn.secondary:hover{filter:brightness(.96)}
+    .btn.link{background:transparent;border:1px solid var(--border);color:#0a5e56}
+    .btn.link:hover{background:#f2fbfa}
     .btn.danger{background:#f6e8e8;color:var(--danger)}
     .btn.danger:hover{filter:brightness(.98)}
     .btn:active{transform:translateY(0)}
@@ -100,6 +102,21 @@
     .login-brand{display:flex;align-items:center;gap:14px;margin-bottom:12px}
     .login-logo-wrap{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6)); border:1px solid var(--border); box-shadow:var(--shadow-sm); backdrop-filter: blur(6px); overflow:hidden}
     .login-logo{max-width:100%;max-height:100%;object-fit:contain; transform:translateY(1px)}
+
+    /* DASHBOARD modal */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,.35);
+      display:none;align-items:center;justify-content:center;padding:24px;z-index:50;
+    }
+    .modal{max-width:820px;width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+    .modal h2{margin:0;font-size:24px}
+    .modal .muted{color:var(--muted);margin:0 0 12px}
+    .mini-table{width:100%;border-collapse:separate;border-spacing:0}
+    .mini-table th,.mini-table td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left}
+    .bar{height:8px;border-radius:999px;background:#e8f2f1;overflow:hidden}
+    .bar > span{display:block;height:100%;background:var(--primary)}
+    .modal-footer{display:flex;justify-content:flex-end;margin-top:14px}
   </style>
 </head>
 <body>
@@ -147,11 +164,18 @@
             <p class="sub">Everyone who opens this page sees the same list. Changes autosave automatically.</p>
           </div>
         </div>
-        <button id="logoutBtn" class="btn secondary" title="Sign out">
-          <!-- logout icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 12H3m6-6L3 12l6 6M21 3v18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Logout</span>
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="dashboardBtn" class="btn link" title="Open dashboard">
+            <!-- chart icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 3v18h18M7 15v3m5-8v11m5-14v14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+            <span>Dashboard</span>
+          </button>
+          <button id="logoutBtn" class="btn secondary" title="Sign out">
+            <!-- logout icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 12H3m6-6L3 12l6 6M21 3v18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
 
       <!-- Row selector -->
@@ -226,13 +250,51 @@
     </div>
   </div>
 
+  <!-- ===== DASHBOARD MODAL ===== -->
+  <div id="dashBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dashTitle">
+      <div class="modal-header">
+        <h2 id="dashTitle">Inventory dashboard</h2>
+        <button id="dashClose" class="btn secondary" title="Close">Close</button>
+      </div>
+      <p class="muted">Overview of <b>items</b> and <b>total amounts</b> per row (live data).</p>
+      <div class="table-wrap" style="border-radius:12px">
+        <table class="mini-table" id="dashTable">
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th style="width:140px;">Items</th>
+              <th style="width:180px;">Total amount</th>
+              <th>Load</th>
+            </tr>
+          </thead>
+          <tbody id="dashBody"></tbody>
+          <tfoot>
+            <tr>
+              <td><b>Total</b></td>
+              <td id="dashTotalItems">0</td>
+              <td id="dashTotalAmount">0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button id="dashRefresh" class="btn link" title="Reload data">
+          <!-- refresh icon -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Supabase JS v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     /******** SIMPLE AUTH (client-side gate) ********/
-    // Fixed credentials
     const FIXED_USER = 'Stegra-logistics';
-    // SHA-256 of "Stegra123"
+    // SHA-256 hash of "Stegra123"
     const FIXED_PASS_SHA256 = 'b2320acb7841b387c0ad4c23bb5c41d559fe8d1192816f2c54fad279e8a8a3e6';
 
     const loginView = document.getElementById('loginView');
@@ -247,13 +309,11 @@
       loginView.style.display = isAuthed ? 'none' : '';
       appView.style.display   = isAuthed ? '' : 'none';
     }
-
     async function sha256Hex(str){
       const enc = new TextEncoder().encode(str);
       const buf = await crypto.subtle.digest('SHA-256', enc);
       return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
     }
-
     async function doLogin(){
       loginErr.style.display = 'none';
       const u = (loginUser.value || '').trim();
@@ -261,19 +321,17 @@
       if(u === FIXED_USER && pHash === FIXED_PASS_SHA256){
         localStorage.setItem('inv_auth', JSON.stringify({u, t: Date.now()}));
         setAuthedUI(true);
-        initApp(); // start app
+        initApp();
       }else{
         loginErr.style.display = 'block';
       }
     }
-
     function doLogout(){
       localStorage.removeItem('inv_auth');
       setAuthedUI(false);
       loginUser.value = '';
       loginPass.value = '';
     }
-
     loginBtn.addEventListener('click', doLogin);
     loginPass.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doLogin(); }});
     logoutBtn.addEventListener('click', doLogout);
@@ -304,11 +362,7 @@
     const itemObject = document.getElementById('itemObject');
     const itemAmount = document.getElementById('itemAmount');
     const itemDate   = document.getElementById('itemDate');
-    const addBtn     = document.getElementById('addBtn');
     const itemsBody  = document.getElementById('itemsBody');
-    const checkAll   = document.getElementById('checkAll');
-    const removeBtn  = document.getElementById('removeSelectedBtn');
-    const exportBtn  = document.getElementById('exportCsvBtn');
     const statusEl   = document.getElementById('status');
 
     const setStatus = (s, type='neutral') => {
@@ -375,7 +429,7 @@
     async function loadForRow(row){
       setStatus(`loading ${row}...`);
       const { data, error } = await supabase
-        .from(TABLE).select('*').eq('row', row)
+        .from(TABLE).select('id,row,object,amount,added_date,added_at').eq('row', row)
         .order('added_at',{ascending:true});
       if(error){ setStatus(`error loading: ${error.message}`,'err'); console.error(error); return; }
       currentItems = Array.isArray(data) ? data : [];
@@ -427,7 +481,6 @@
 
       if(error){
         setStatus(`update failed: ${error.message}`,'err');
-        // rollback
         currentItems[idx].amount = Math.max(1, newVal - delta);
         renderItems();
         return;
@@ -447,7 +500,7 @@
 
       currentItems = currentItems.filter(it => !ids.includes(String(it.id)));
       renderItems();
-      checkAll.checked = false;
+      document.getElementById('checkAll').checked = false;
       setStatus('removed','ok');
     }
 
@@ -467,7 +520,8 @@
       URL.revokeObjectURL(url);
     }
 
-    function wireEvents(){
+    // wire main events
+    function wireMainEvents(){
       document.getElementById('addBtn').addEventListener('click', addItem);
       document.getElementById('removeSelectedBtn').addEventListener('click', removeSelected);
       document.getElementById('exportCsvBtn').addEventListener('click', ()=>exportCSV(currentItems));
@@ -488,12 +542,76 @@
       });
     }
 
+    /******** DASHBOARD ********/
+    const dashBackdrop = document.getElementById('dashBackdrop');
+    const dashOpen     = document.getElementById('dashboardBtn');
+    const dashClose    = document.getElementById('dashClose');
+    const dashRefresh  = document.getElementById('dashRefresh');
+    const dashBody     = document.getElementById('dashBody');
+    const dashTotalItems  = document.getElementById('dashTotalItems');
+    const dashTotalAmount = document.getElementById('dashTotalAmount');
+
+    function openDashboard(){ dashBackdrop.style.display = 'flex'; }
+    function closeDashboard(){ dashBackdrop.style.display = 'none'; }
+
+    async function loadDashboard(){
+      setStatus('loading dashboard...');
+      // Hämta bara det vi behöver för att hålla payload liten
+      const { data, error } = await supabase
+        .from(TABLE).select('row,amount');
+      if(error){ setStatus(`dashboard error: ${error.message}`,'err'); console.error(error); return; }
+
+      // Aggregat per row
+      const agg = {};
+      rowsList.forEach(r => agg[r] = { items:0, amount:0 });
+      for(const it of (data || [])){
+        const r = it.row || 'UNKNOWN';
+        if(!agg[r]) agg[r] = { items:0, amount:0 };
+        agg[r].items += 1;
+        agg[r].amount += Number(it.amount || 0);
+      }
+
+      // hitta max för bar-skalan
+      const maxAmt = Math.max(1, ...Object.values(agg).map(x => x.amount));
+
+      // render
+      dashBody.innerHTML = '';
+      let tItems = 0, tAmount = 0;
+      for(const r of rowsList){
+        const a = agg[r];
+        tItems += a.items; tAmount += a.amount;
+        const tr = document.createElement('tr');
+        const pct = Math.round((a.amount / maxAmt) * 100);
+
+        tr.innerHTML = `
+          <td><b>${r}</b></td>
+          <td>${a.items}</td>
+          <td>${a.amount}</td>
+          <td>
+            <div class="bar" title="${pct}% of max">
+              <span style="width:${pct}%;"></span>
+            </div>
+          </td>
+        `;
+        dashBody.appendChild(tr);
+      }
+      dashTotalItems.textContent = tItems;
+      dashTotalAmount.textContent = tAmount;
+      setStatus('dashboard ready','ok');
+    }
+
+    dashOpen.addEventListener('click', async () => { openDashboard(); await loadDashboard(); });
+    dashClose.addEventListener('click', closeDashboard);
+    dashBackdrop.addEventListener('click', (e)=>{ if(e.target === dashBackdrop) closeDashboard(); });
+    dashRefresh.addEventListener('click', loadDashboard);
+
+    /******** INIT ********/
     async function initApp(){
-      const rowSelectEl = document.getElementById('rowSelect');
-      rowSelectEl.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
-      rowSelectEl.value = currentRow;
+      // rows + defaults
+      rowSelect.innerHTML = rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
+      rowSelect.value = currentRow;
       document.getElementById('itemDate').value = todayStr();
-      wireEvents();
+      wireMainEvents();
       await loadForRow(currentRow);
     }
   </script>
