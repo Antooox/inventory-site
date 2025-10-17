@@ -36,17 +36,12 @@
       width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;font:inherit;transition:border-color .15s,box-shadow .15s}
     input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgb(15 143 131 / 12%)}
 
-    .rowgrid{display:grid;gap:14px;grid-template-columns:minmax(240px,1fr) 160px 120px 140px}
-    @media (max-width:980px){.rowgrid{grid-template-columns:1fr 1fr}}
-    @media (max-width:560px){.rowgrid{grid-template-columns:1fr}}
-    @media (max-width:480px){input,select{padding:12px}}
+    .rowgrid{display:grid;gap:14px;grid-template-columns:minmax(200px,1fr) minmax(170px,1fr) 120px 140px 170px}
+    @media (max-width:1080px){.rowgrid{grid-template-columns:1fr 1fr 1fr}}
+    @media (max-width:720px){.rowgrid{grid-template-columns:1fr 1fr}}
+    @media (max-width:520px){.rowgrid{grid-template-columns:1fr}}
 
-    .cap-line{display:flex;align-items:center;gap:10px;margin-top:8px}
-    .cap-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:13px;background:#fff}
-    .cap-chip.ok{color:var(--ok);background:var(--ok-bg);border-color:#c6efe6}
-    .cap-chip.warn{color:var(--warn);background:var(--warn-bg);border-color:#f6e6bf}
-    .cap-chip.danger{color:var(--danger);background:#fdecec;border-color:#f5cccc}
-
+    .serial-inline{display:flex;gap:8px;align-items:center}
     .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border:0;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .06s,box-shadow .15s,background .15s}
     .btn svg{width:18px;height:18px}
     .btn.primary{background:var(--primary);color:#fff;box-shadow:var(--shadow-sm)}
@@ -69,14 +64,20 @@
       .right{margin-left:0}
     }
 
+    .cap-line{display:flex;align-items:center;gap:10px;margin-top:8px}
+    .cap-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:13px;background:#fff}
+    .cap-chip.ok{color:var(--ok);background:var(--ok-bg);border-color:#c6efe6}
+    .cap-chip.warn{color:var(--warn);background:var(--warn-bg);border-color:#f6e6bf}
+    .cap-chip.danger{color:var(--danger);background:#fdecec;border-color:#f5cccc}
+
     .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:14px;background:#fff}
-    table{width:100%;border-collapse:separate;border-spacing:0;min-width:920px}
+    table{width:100%;border-collapse:separate;border-spacing:0;min-width:1080px}
     thead th{position:sticky;top:0;background:#fbfffe;border-bottom:1px solid var(--border-strong);padding:12px 12px;text-align:left;font-size:13px;color:#3b4746}
     tbody td{padding:14px 12px;border-bottom:1px solid var(--border)}
     tbody tr:nth-child(odd){background:var(--stripe)}
     tbody tr:hover{background:#f3fbf9}
-    @media (max-width:620px){.col-added-at{display:none}}
-    @media (max-width:520px){.col-added-date{display:none}}
+    @media (max-width:740px){.col-added-at{display:none}}
+    @media (max-width:620px){.col-added-date{display:none}}
 
     .amount-cell{display:flex;align-items:center;gap:10px}
     .qty-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:10px;background:#fff;cursor:pointer}
@@ -85,10 +86,10 @@
     .qty-value{min-width:24px;text-align:center;font-weight:800}
 
     .space-wrap{display:flex;align-items:center;gap:8px}
-    .space-edit{width:72px;padding:8px 10px;border:1px solid var(--border);border-radius:10px}
+    .space-edit{width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:10px}
 
     .status{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--muted);padding:8px 10px;border:1px solid var(--border);border-radius:999px;background:#fff}
-    .status.ok{color:var(--ok);background:var(--ok-bg);border-color:#c6efe6}
+    .status.ok{color:#107a65;background:#e9fbf6;border-color:#c6efe6}
     .status.err{color:#b02a2a;background:#fdecec;border-color:#f5cccc}
 
     /* login */
@@ -101,19 +102,16 @@
     .login-logo-wrap{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.6));border:1px solid var(--border);box-shadow:var(--shadow-sm);backdrop-filter:blur(6px);overflow:hidden}
     .login-logo{max-width:100%;max-height:100%;object-fit:contain;transform:translateY(1px)}
 
-    .obj-text{cursor:text;border-radius:6px;padding:2px 4px}
-    .obj-text:hover{background:#f2fbfa;border:1px solid var(--border)}
-    .obj-edit{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font:inherit}
-    .obj-edit:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgb(15 143 131 / 12%)}
+    .obj-text,.serial-text{cursor:text;border-radius:6px;padding:2px 4px}
+    .obj-text:hover,.serial-text:hover{background:#f2fbfa;border:1px solid var(--border)}
+    .obj-edit,.serial-edit{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font:inherit}
+    .obj-edit:focus,.serial-edit:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgb(15 143 131 / 12%)}
 
     /* modal */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:24px;z-index:60}
     .modal-backdrop.show{display:flex!important}
     .modal{max-width:980px;width:100%;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px}
     .modal-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap}
-    .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
-    .seg button{padding:8px 12px;border:0;background:#fff;color:#0a5e56;cursor:pointer}
-    .seg button.active{background:var(--primary-weak);color:var(--primary)}
     .chart-wrap{width:100%;height:520px;border:1px solid var(--border);border-radius:14px;background:#fff;overflow:hidden}
     @media (max-width:640px){.chart-wrap{height:400px}}
     .legend{font-size:13px;color:var(--muted)}
@@ -188,18 +186,29 @@
           <label for="itemObject">Object</label>
           <input id="itemObject" type="text" placeholder="Object — e.g. Valve ABC-123"/>
         </div>
+
         <div>
-          <label for="itemDate">Added date</label>
-          <input id="itemDate" type="date"/>
+          <label for="itemSerial">Serial</label>
+          <div class="serial-inline">
+            <input id="itemSerial" type="text" placeholder="Scan or type…"/>
+            <button id="scanBtn" class="btn secondary" type="button">Scan</button>
+          </div>
         </div>
+
         <div>
           <label for="itemAmount">Amount</label>
           <input id="itemAmount" type="number" min="1" step="1" value="1"/>
         </div>
+
         <div>
           <label for="itemSpace">Space % (per unit)</label>
           <input id="itemSpace" type="number" min="1" max="100" step="1" value="10"
                  title="How large space a single unit takes of the row (1–100%)"/>
+        </div>
+
+        <div>
+          <label for="itemDate">Added date</label>
+          <input id="itemDate" type="date"/>
         </div>
       </div>
 
@@ -217,6 +226,7 @@
             <tr>
               <th style="width:44px;"><input type="checkbox" id="checkAll" title="Select all"/></th>
               <th>Object</th>
+              <th>Serial</th>
               <th style="width:190px;">Amount</th>
               <th style="width:180px;">Space % (per unit)</th>
               <th class="col-added-date" style="width:170px;">Added date</th>
@@ -265,6 +275,20 @@
     </div>
   </div>
 
+  <!-- SCAN MODAL (camera) -->
+  <div id="scanModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <h3 style="margin:0">Scan serial</h3>
+        <button id="scanClose" class="btn secondary">Close</button>
+      </div>
+      <video id="scanVideo" playsinline style="width:100%;border-radius:10px;background:#000;min-height:260px"></video>
+      <p class="legend">Point the camera at the barcode/QR. It will auto-fill and close.</p>
+    </div>
+  </div>
+
+  <!-- ZXing fallback (only loads once, safe) -->
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
   (function(){ /* ===== IIFE: isolates everything ===== */
@@ -312,6 +336,7 @@
     const rowSelect=document.getElementById('rowSelect');
     const capChip=document.getElementById('capChip');
     const itemObject=document.getElementById('itemObject');
+    const itemSerial=document.getElementById('itemSerial');
     const itemAmount=document.getElementById('itemAmount');
     const itemDate=document.getElementById('itemDate');
     const itemSpace=document.getElementById('itemSpace');
@@ -331,6 +356,12 @@
     const modeCapacityBtn=document.getElementById('modeCapacity');
     const modeAmountBtn=document.getElementById('modeAmount');
     const dashboardBtn=document.getElementById('dashboardBtn');
+
+    // Scan modal DOM
+    const scanBtn=document.getElementById('scanBtn');
+    const scanModal=document.getElementById('scanModal');
+    const scanVideo=document.getElementById('scanVideo');
+    const scanClose=document.getElementById('scanClose');
 
     const setStatus=(s,type='neutral')=>{ statusEl.textContent=`Status: ${s}`; statusEl.classList.remove('ok','err'); if(type==='ok') statusEl.classList.add('ok'); if(type==='err') statusEl.classList.add('err'); };
     const todayStr=()=>new Date().toISOString().slice(0,10);
@@ -363,6 +394,9 @@
         const tdObj=document.createElement('td');
         const span=document.createElement('span'); span.className='obj-text'; span.dataset.id=it.id; span.textContent=it.object||''; tdObj.appendChild(span);
 
+        const tdSerial=document.createElement('td');
+        const sspan=document.createElement('span'); sspan.className='serial-text'; sspan.dataset.id=it.id; sspan.textContent=it.serial||''; tdSerial.appendChild(sspan);
+
         const tdAmt=document.createElement('td'); tdAmt.className='amount-cell';
         const dec=document.createElement('button'); dec.className='qty-btn'; dec.dataset.action='dec'; dec.dataset.id=it.id; dec.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
         const val=document.createElement('span'); val.className='qty-value'; val.dataset.valId=it.id; val.textContent=Number(it.amount||0);
@@ -386,7 +420,7 @@
         mBtn.title='Move this item to another row';
         tdAct.appendChild(mBtn);
 
-        tr.append(tdC,tdObj,tdAmt,tdSpace,tdDate,tdAt,tdAct);
+        tr.append(tdC,tdObj,tdSerial,tdAmt,tdSpace,tdDate,tdAt,tdAct);
         itemsBody.appendChild(tr);
         dec.disabled=Number(it.amount||0)<=1;
       });
@@ -397,7 +431,7 @@
       try{
         setStatus(`loading ${row}...`);
         const {data,error}=await supabase.from(TABLE)
-          .select('id,row,object,amount,space_pct,added_date,added_at')
+          .select('id,row,object,serial,amount,space_pct,added_date,added_at')
           .eq('row',row).order('added_at',{ascending:true});
         if(error) throw error;
         currentItems=Array.isArray(data)?data:[];
@@ -409,20 +443,28 @@
     async function addItem(){
       const obj=(itemObject.value||'').trim();
       if(!obj){ alert('Enter an object name'); return; }
+      const serialVal=(itemSerial.value||'').trim() || null;
       const dateVal=itemDate.value||todayStr();
       const amountVal=Math.max(1,Number(itemAmount.value)||1);
       let spaceVal=Number(itemSpace.value); if(!Number.isFinite(spaceVal)||spaceVal<1) spaceVal=1; if(spaceVal>100) spaceVal=100;
 
-      const newItem={ id:(crypto?.randomUUID?.()||String(Date.now())), row:currentRow, object:obj, amount:amountVal, space_pct:spaceVal, added_date:dateVal, added_at:new Date().toISOString() };
+      const newItem={ id:(crypto?.randomUUID?.()||String(Date.now())), row:currentRow, object:obj, serial:serialVal, amount:amountVal, space_pct:spaceVal, added_date:dateVal, added_at:new Date().toISOString() };
 
       try{
         setStatus('saving...');
         const {data,error}=await supabase.from(TABLE).insert(newItem).select().maybeSingle();
-        if(error) throw error;
+        if(error){
+          if(error.message && /duplicate key value/i.test(error.message)) throw new Error('Serial already exists');
+          throw error;
+        }
         if(currentRow===newItem.row){ currentItems.push(data||newItem); renderItems(); }
-        itemObject.value=''; itemAmount.value=1; itemSpace.value=10;
+        itemObject.value=''; itemSerial.value=''; itemAmount.value=1; itemSpace.value=10;
         setStatus('saved','ok');
-      }catch(err){ console.error('insert error',err); setStatus(`save failed: ${err.message}`,'err'); }
+      }catch(err){
+        console.error('insert error',err);
+        setStatus(`save failed: ${err.message}`,'err');
+        if(/Serial already exists/i.test(err.message)) alert('Serial already exists on another item.');
+      }
     }
 
     async function updateAmount(id,delta){
@@ -475,6 +517,28 @@
       }
     }
 
+    async function renameSerial(id,newSerial,revert){
+      const idx=currentItems.findIndex(x=>String(x.id)===String(id));
+      if(idx===-1) return;
+      const old=currentItems[idx].serial||'';
+      const val=(newSerial||'').trim() || null;
+      if((val||'')===old){ revert(old); return; }
+      currentItems[idx].serial=val; renderItems();
+      try{
+        setStatus('updating serial...');
+        const {error}=await supabase.from(TABLE).update({serial:val}).eq('id',id).eq('row',currentRow);
+        if(error){
+          if(error.message && /duplicate key value/i.test(error.message)) throw new Error('Serial already exists');
+          throw error;
+        }
+        setStatus('updated','ok');
+      }catch(err){
+        currentItems[idx].serial=old; renderItems();
+        setStatus(`serial failed: ${err.message}`,'err');
+        if(/Serial already exists/i.test(err.message)) alert('Serial already exists on another item.');
+      }
+    }
+
     async function moveItem(id,targetRow){
       const idx=currentItems.findIndex(x=>String(x.id)===String(id));
       if(idx===-1) return;
@@ -482,7 +546,6 @@
         setStatus(`moving to ${targetRow}...`);
         const {error}=await supabase.from(TABLE).update({row:targetRow}).eq('id',id).eq('row',currentRow);
         if(error) throw error;
-        // remove from current UI list
         currentItems.splice(idx,1);
         renderItems();
         setStatus('moved','ok');
@@ -505,8 +568,8 @@
 
     function exportCSV(items){
       if(!Array.isArray(items)||items.length===0){ alert('Nothing to export'); return; }
-      const headers=['row','object','amount','space_pct','added_date','added_at'];
-      const rows=items.map(it=>[it.row??'',it.object??'',it.amount??0,(it.space_pct??''),it.added_date??'',it.added_at??'']);
+      const headers=['row','object','serial','amount','space_pct','added_date','added_at'];
+      const rows=items.map(it=>[it.row??'',it.object??'',it.serial??'',it.amount??0,(it.space_pct??''),it.added_date??'',it.added_at??'']);
       const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
       const csv=[headers.join(','),...rows.map(r=>r.map(esc).join(','))].join('\r\n');
       const blob=new Blob(["\uFEFF"+csv],{type:'text/csv;charset=utf-8;'});
@@ -515,6 +578,7 @@
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
     }
 
+    /* ========== Events (UI) ========== */
     function wireEventsOnce(){
       if(wired) return; wired=true;
 
@@ -525,12 +589,16 @@
         itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=e.target.checked);
       });
 
-      itemsBody.addEventListener('click',e=>{
-        const btn=e.target.closest('.qty-btn');
-        if(btn){ updateAmount(btn.dataset.id, btn.dataset.action==='inc'? +1 : -1); return; }
+      rowSelect.addEventListener('change',async e=>{
+        currentRow=e.target.value; localStorage.setItem('inv_row',currentRow);
+        checkAll.checked=false; await loadForRow(currentRow);
+      });
 
-        const span=e.target.closest('.obj-text');
-        if(span){
+      // inline handlers: amount, object, serial, space, move
+      itemsBody.addEventListener('click',e=>{
+        const btn=e.target.closest('.qty-btn'); if(btn){ updateAmount(btn.dataset.id, btn.dataset.action==='inc'?+1:-1); return; }
+
+        const span=e.target.closest('.obj-text'); if(span){
           const id=span.dataset.id, old=span.textContent;
           const inp=document.createElement('input'); inp.type='text'; inp.value=old; inp.className='obj-edit';
           span.replaceWith(inp); inp.focus(); inp.select();
@@ -542,24 +610,28 @@
           return;
         }
 
+        const sspan=e.target.closest('.serial-text'); if(sspan){
+          const id=sspan.dataset.id, old=sspan.textContent;
+          const inp=document.createElement('input'); inp.type='text'; inp.value=old; inp.className='serial-edit';
+          sspan.replaceWith(inp); inp.focus(); inp.select();
+          const revert=(txt)=>{ const s=document.createElement('span'); s.className='serial-text'; s.dataset.id=id; s.textContent=txt; inp.replaceWith(s); };
+          const save =()=>renameSerial(id,inp.value,revert);
+          const cancel=()=>revert(old);
+          inp.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();save();} else if(ev.key==='Escape'){ev.preventDefault();cancel();} });
+          inp.addEventListener('blur',save);
+          return;
+        }
+
         const moveBtn=e.target.closest('.btn.tiny.link');
         if(moveBtn){
           const id=moveBtn.dataset.id;
-          // create a small select inline
-          const sel=document.createElement('select');
-          sel.className='space-edit'; // reuse styling
+          const sel=document.createElement('select'); sel.className='space-edit';
           rowsList.forEach(r=>{
             const opt=document.createElement('option'); opt.value=r; opt.textContent=r; if(r===currentRow) opt.disabled=true; sel.appendChild(opt);
           });
-          moveBtn.replaceWith(sel);
-          sel.focus();
-          sel.addEventListener('change',()=>{ const target=sel.value; moveItem(id,target); });
-          sel.addEventListener('blur',()=>{ // revert if no change
-            if(sel.parentElement){
-              const back=document.createElement('button'); back.className='btn tiny link'; back.textContent='Move'; back.dataset.id=id;
-              sel.replaceWith(back);
-            }
-          });
+          moveBtn.replaceWith(sel); sel.focus();
+          sel.addEventListener('change',()=>{ moveItem(id, sel.value); });
+          sel.addEventListener('blur',()=>{ if(sel.parentElement){ const back=document.createElement('button'); back.className='btn tiny link'; back.textContent='Move'; back.dataset.id=id; sel.replaceWith(back);} });
         }
       });
 
@@ -574,13 +646,8 @@
         }
       });
 
-      rowSelect.addEventListener('change',async e=>{
-        currentRow=e.target.value; localStorage.setItem('inv_row',currentRow);
-        checkAll.checked=false; await loadForRow(currentRow);
-      });
-
-      // Dashboard wiring
-      document.getElementById('dashboardBtn').addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
+      // Dashboard
+      dashboardBtn.addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
       dashClose.addEventListener('click',closeDashboard);
       dashRefresh.addEventListener('click',loadDashboard);
       dashDownload.addEventListener('click',downloadChart);
@@ -590,9 +657,10 @@
       modeAmountBtn.addEventListener('click',()=>{ dashMode='amount';   modeAmountBtn.classList.add('active');   modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
     }
 
+    /* ===== Dashboard drawing ===== */
+    let dashData=[], _resize=null;
     function openDashboard(){ dashBackdrop.classList.add('show'); }
     function closeDashboard(){ dashBackdrop.classList.remove('show'); if(_resize){window.removeEventListener('resize',_resize); _resize=null;} }
-    let dashData=[], _resize=null;
 
     async function loadDashboard(){
       try{
@@ -663,82 +731,51 @@
     }
     function downloadChart(){ const a=document.createElement('a'); a.download=`inventory-dashboard-${dashMode}-${new Date().toISOString().slice(0,10)}.png`; a.href=dashCanvas.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); }
 
-    function wireEventsOnce(){
-      if(wired) return; wired=true;
-      addBtn.addEventListener('click',addItem);
-      removeBtn.addEventListener('click',removeSelected);
-      exportBtn.addEventListener('click',()=>exportCSV(currentItems));
-      checkAll.addEventListener('change',e=>{
-        itemsBody.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=e.target.checked);
-      });
-      rowSelect.addEventListener('change',async e=>{ currentRow=e.target.value; localStorage.setItem('inv_row',currentRow); checkAll.checked=false; await loadForRow(currentRow); });
-
-      // inline handlers för namn/space/amount/move
-      itemsBody.addEventListener('click',e=>{
-        const btn=e.target.closest('.qty-btn'); if(btn){ updateAmount(btn.dataset.id, btn.dataset.action==='inc'?+1:-1); return; }
-        const span=e.target.closest('.obj-text'); if(span){
-          const id=span.dataset.id, old=span.textContent;
-          const inp=document.createElement('input'); inp.type='text'; inp.value=old; inp.className='obj-edit';
-          span.replaceWith(inp); inp.focus(); inp.select();
-          const revert=(txt)=>{ const s=document.createElement('span'); s.className='obj-text'; s.dataset.id=id; s.textContent=txt; inp.replaceWith(s); };
-          const save =()=>renameObject(id,inp.value,revert);
-          const cancel=()=>revert(old);
-          inp.addEventListener('keydown',ev=>{ if(ev.key==='Enter'){ev.preventDefault();save();} else if(ev.key==='Escape'){ev.preventDefault();cancel();} });
-          inp.addEventListener('blur',save);
-          return;
-        }
-      });
-      itemsBody.addEventListener('change',e=>{
-        const spaceInput=e.target.closest('.space-edit');
-        if(spaceInput && spaceInput.dataset.id){
-          let v=Number(spaceInput.value);
-          if(!Number.isFinite(v)) return;
-          v=Math.max(1,Math.min(100,Math.round(v)));
-          spaceInput.value=v;
-          updateSpace(spaceInput.dataset.id,v);
-        }
-      });
-      itemsBody.addEventListener('click',e=>{
-        const moveBtn=e.target.closest('.btn.tiny.link');
-        if(moveBtn){
-          const id=moveBtn.dataset.id;
-          const sel=document.createElement('select'); sel.className='space-edit';
-          rowsList.forEach(r=>{
-            const opt=document.createElement('option'); opt.value=r; opt.textContent=r; if(r===currentRow) opt.disabled=true; sel.appendChild(opt);
-          });
-          moveBtn.replaceWith(sel); sel.focus();
-          sel.addEventListener('change',()=>{ moveItem(id, sel.value); });
-          sel.addEventListener('blur',()=>{ if(sel.parentElement){ const back=document.createElement('button'); back.className='btn tiny link'; back.textContent='Move'; back.dataset.id=id; sel.replaceWith(back);} });
-        }
-      });
-
-      // Dashboard triggers
-      dashboardBtn.addEventListener('click', async ()=>{ openDashboard(); await loadDashboard(); });
-      dashClose.addEventListener('click',closeDashboard);
-      dashRefresh.addEventListener('click',loadDashboard);
-      dashDownload.addEventListener('click',downloadChart);
-      dashBackdrop.addEventListener('click',e=>{ if(e.target===dashBackdrop) closeDashboard(); });
-      modeCapacityBtn.addEventListener('click',()=>{ dashMode='capacity'; modeCapacityBtn.classList.add('active'); modeCapacityBtn.setAttribute('aria-selected','true'); modeAmountBtn.classList.remove('active'); modeAmountBtn.removeAttribute('aria-selected'); loadDashboard(); });
-      modeAmountBtn.addEventListener('click',()=>{ dashMode='amount'; modeAmountBtn.classList.add('active'); modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
+    /* ===== Scanner (BarcodeDetector → ZXing fallback) ===== */
+    let _scanStream=null, _zxingReader=null, _scanLoopReq=null;
+    function openScan(){ scanModal.classList.add('show'); }
+    function closeScan(){
+      scanModal.classList.remove('show');
+      if(_scanLoopReq){ cancelAnimationFrame(_scanLoopReq); _scanLoopReq=null; }
+      if(_scanStream){ _scanStream.getTracks().forEach(t=>t.stop()); _scanStream=null; }
+      if(_zxingReader){ try{ _zxingReader.reset(); }catch{} _zxingReader=null; }
     }
-
-    function openDashboard(){ dashBackdrop.classList.add('show'); }
-    function closeDashboard(){ dashBackdrop.classList.remove('show'); if(_resize){window.removeEventListener('resize',_resize); _resize=null;} }
-
-    function startApp(){
+    async function startNativeDetector(){
+      const detector=new window.BarcodeDetector({formats:['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','itf']});
+      _scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+      scanVideo.srcObject=_scanStream; await scanVideo.play();
+      const detect=async()=>{
+        try{
+          const codes=await detector.detect(scanVideo);
+          if(codes && codes.length){
+            itemSerial.value=(codes[0].rawValue||'').trim();
+            closeScan(); return;
+          }
+        }catch(e){}
+        _scanLoopReq=requestAnimationFrame(detect);
+      };
+      detect();
+    }
+    async function startZXing(){
+      _zxingReader=new ZXing.BrowserMultiFormatReader();
+      const devices=await ZXing.BrowserCodeReader.listVideoInputDevices();
+      const back=devices.find(d=>/back|environment/i.test(d.label))||devices[0];
+      _zxingReader.decodeFromVideoDevice(back?.deviceId, scanVideo, (res,err)=>{
+        if(res && res.getText()){
+          itemSerial.value=res.getText().trim();
+          closeScan();
+        }
+      });
+    }
+    scanBtn?.addEventListener('click', async ()=>{
       try{
-        rowSelect.innerHTML=rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
-        if(!rowsList.includes(currentRow)) currentRow='ROW1';
-        rowSelect.value=currentRow;
-        itemDate.value=todayStr();
-        itemSpace.value=Math.min(100,Math.max(1,Number(itemSpace.value)||10));
-        wireEventsOnce();
-        loadForRow(currentRow);
-      }catch(err){ console.error('startApp error',err); setStatus(`init error: ${err.message}`,'err'); }
-    }
-    function teardownApp(){ wired=false; itemsBody.innerHTML=''; setStatus('ready'); }
-
-  })(); /* ===== /IIFE ===== */
-  </script>
-</body>
-</html>
+        openScan();
+        if('BarcodeDetector' in window){ await startNativeDetector(); }
+        else{ await startZXing(); }
+      }catch(err){
+        closeScan();
+        alert('Could not start camera: '+err.message);
+      }
+    });
+    scanClose?.addEventListener('click', closeScan);
+    scanModal.addEventListener('click',e=>{ if(e.target===scanModal) cl
