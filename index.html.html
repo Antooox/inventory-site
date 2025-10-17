@@ -287,7 +287,7 @@
     </div>
   </div>
 
-  <!-- ZXing fallback (only loads once, safe) -->
+  <!-- ZXing fallback -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -654,10 +654,10 @@
       dashBackdrop.addEventListener('click',e=>{ if(e.target===dashBackdrop) closeDashboard(); });
 
       modeCapacityBtn.addEventListener('click',()=>{ dashMode='capacity'; modeCapacityBtn.classList.add('active'); modeCapacityBtn.setAttribute('aria-selected','true'); modeAmountBtn.classList.remove('active'); modeAmountBtn.removeAttribute('aria-selected'); loadDashboard(); });
-      modeAmountBtn.addEventListener('click',()=>{ dashMode='amount';   modeAmountBtn.classList.add('active');   modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
+      modeAmountBtn.addEventListener('click',()=>{ dashMode='amount'; modeAmountBtn.classList.add('active'); modeAmountBtn.setAttribute('aria-selected','true'); modeCapacityBtn.classList.remove('active'); modeCapacityBtn.removeAttribute('aria-selected'); loadDashboard(); });
     }
 
-    /* ===== Dashboard drawing ===== */
+    /* ===== Dashboard drawing + controls ===== */
     let dashData=[], _resize=null;
     function openDashboard(){ dashBackdrop.classList.add('show'); }
     function closeDashboard(){ dashBackdrop.classList.remove('show'); if(_resize){window.removeEventListener('resize',_resize); _resize=null;} }
@@ -778,4 +778,23 @@
       }
     });
     scanClose?.addEventListener('click', closeScan);
-    scanModal.addEventListener('click',e=>{ if(e.target===scanModal) cl
+    scanModal.addEventListener('click',e=>{ if(e.target===scanModal) closeScan(); });
+
+    /* ===== Boot ===== */
+    function startApp(){
+      try{
+        rowSelect.innerHTML=rowsList.map(r=>`<option value="${r}">${r}</option>`).join('');
+        if(!rowsList.includes(currentRow)) currentRow='ROW1';
+        rowSelect.value=currentRow;
+        itemDate.value=todayStr();
+        itemSpace.value=Math.min(100,Math.max(1,Number(itemSpace.value)||10));
+        wireEventsOnce();
+        loadForRow(currentRow);
+      }catch(err){ console.error('startApp error',err); setStatus(`init error: ${err.message}`,'err'); }
+    }
+    function teardownApp(){ wired=false; itemsBody.innerHTML=''; setStatus('ready'); }
+
+  })(); /* ===== /IIFE ===== */
+  </script>
+</body>
+</html>
